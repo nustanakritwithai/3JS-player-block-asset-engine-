@@ -4,33 +4,35 @@ Checkpoint repository for **Three.js Character Prototype Studio**.
 
 ## Current checkpoint
 
-**V1.5 — Momentum / Acceleration / Braking / Turn Inertia**
+**V1.6 — Equipment Mass Response**
 
-The project is a mobile-first Three.js tool for building blocky / stylized characters, editing rigid pivot rigs, authoring poses and animation clips, validating animation quality, exporting game-ready animation runtime assets, and progressively adding believable weight, balance, impact and inertia response.
+The project is a mobile-first Three.js tool for building blocky / stylized characters, editing rigid pivot rigs, authoring poses and animation clips, validating animation quality, exporting game-ready animation runtime assets, and progressively adding believable weight, balance, impact, inertia and equipment-load response.
 
 ### Current pipeline
 
-Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / LookDev → Pose Library → Animation Timeline → Foot Contact → Weight Transfer Curve → Weight-Driven Pelvis → Upper Body Weight Response → Impact / Compression / Recovery → **Momentum / Acceleration / Braking** → Animation QA / Balance QA → Game Animation Runtime → Export
+Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / LookDev → Pose Library → Animation Timeline → Foot Contact → Weight Transfer Curve → Weight-Driven Pelvis → Upper Body Weight Response → Impact / Compression / Recovery → Momentum / Acceleration / Braking → **Equipment Mass Response** → Animation QA / Balance QA → Game Animation Runtime → Export
 
-### V1.5 additions
+### V1.6 additions
 
-- semantic runtime motion class per clip: idle / walk / run / action / custom
-- per-clip target motion speed
-- desired velocity, acceleration, braking and turn-rate signals
-- automatic idle / walk / run selection from desired speed
-- spring-damped start lean and brake lean
-- turn lean scaled by speed and turn rate
-- forward/back inertial body shift
-- live velocity / acceleration / lean diagnostics
-- animation movement response does not own world position or collision
-- exported AnimationRuntime supports `setDesiredVelocity()` and `setTurnRate()`
+- equipment identity / category / attachment socket / mass profile
+- presets: None / Sword / Great Sword / Hammer
+- socket-aware equipment contribution to Center of Mass
+- carrying-side shoulder drop
+- chest counter-balance
+- pelvis counter-shift
+- stance widening under heavy load
+- momentum inertia scales with equipment load
+- action recovery slows under heavy load
+- Preview / Bake / Clear Bake workflow
+- exported AnimationRuntime supports the same equipment-load response
+- gameplay ownership remains outside animation: inventory, combat, world position and collision are not owned by this system
 
 ### Existing foundation retained
 
 - CharacterSpec V1 as source of truth
 - Blocky humanoid procedural generator
 - THREE.Group rigid pivot rig
-- Body mass / equipment mass / Center of Mass / support area
+- Body mass / Center of Mass / support area
 - Pose Library / pose delta / joint chains
 - Authored Animation Timeline and keyframes
 - Procedural animation baking
@@ -40,6 +42,7 @@ Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / L
 - V1.2 Weight-Driven Pelvis Solver / COM feedback
 - V1.3 Chest / Neck / Head weight-response chain
 - V1.4 Impact / Compression / Recovery
+- V1.5 Momentum / Acceleration / Braking / Turn Inertia
 - Animation Quality Inspector
 - Runtime states, transitions and animation events
 - img2threejs staging adapter
@@ -51,6 +54,6 @@ Future development must **continue from the latest committed/checkpointed versio
 
 Realism roadmap:
 
-V1.0 COM & Support → V1.1 Weight Transfer Curve → V1.2 Weight-driven Pelvis → V1.3 Spine/Chest/Neck/Head Response → V1.4 Compression/Impact/Recovery → **V1.5 Momentum** → V1.6 Equipment Mass Response → V1.7 Attack Weight → V1.8 Foot Plant/IK → V1.9 Weight QA → V2.0 Animation Weight Studio.
+V1.0 COM & Support → V1.1 Weight Transfer Curve → V1.2 Weight-driven Pelvis → V1.3 Spine/Chest/Neck/Head Response → V1.4 Compression/Impact/Recovery → V1.5 Momentum → **V1.6 Equipment Mass Response** → V1.7 Attack Weight → V1.8 Foot Plant/IK → V1.9 Weight QA → V2.0 Animation Weight Studio.
 
-See `checkpoints/v1.5/` for the current checkpoint notes and momentum runtime contract.
+See `checkpoints/v1.6/` for the current checkpoint notes and equipment-weight contract.
