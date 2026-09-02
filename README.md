@@ -4,41 +4,43 @@ Checkpoint repository for **Three.js Character Prototype Studio**.
 
 ## Current checkpoint
 
-**V1.2 — Weight-Driven Pelvis Solver / COM Feedback**
+**V1.3 — Spine / Chest / Neck / Head Weight Response**
 
 The project is a mobile-first Three.js tool for building blocky / stylized characters, editing rigid pivot rigs, authoring poses and animation clips, validating animation quality, exporting game-ready animation runtime assets, and building progressively more believable weight response.
 
 ### Current pipeline
 
-Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / LookDev → Pose Library → Animation Timeline → Foot Contact → Weight Transfer Curve → **Weight-Driven Pelvis Solver** → Animation QA / Balance QA → Game Animation Runtime → Export
+Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / LookDev → Pose Library → Animation Timeline → Foot Contact → Weight Transfer Curve → Weight-Driven Pelvis → **Upper Body Weight Response** → Animation QA / Balance QA → Game Animation Runtime → Export
 
-### V1.2 additions
+### V1.3 additions
 
-- V1.1 continuous Left/Right weight curve drives pelvis response
-- weighted support-foot target
-- live Center of Mass feedback
-- bounded lateral pelvis shift
-- hip drop/lift
-- pelvis twist
-- vertical compression under strong single-leg support
-- non-destructive runtime preview
-- explicit Bake Solver to authored keyframes
-- provenance-tracked Clear Bake
-- Animation QA and Balance QA evaluate the solver layer
-- exported game runtime includes a lightweight deterministic pelvis-weight solver
+- V1.2 pelvis response now propagates upward through `Pelvis → Chest → Neck → Head`
+- chest counter-twist against pelvis rotation
+- chest counter-bend against hip drop
+- chest lean under single-leg loading
+- neck counter response
+- head yaw/roll stabilization
+- head pitch stabilization
+- configurable response strength and smoothing
+- non-destructive runtime Preview Chain
+- Bake Chain to Chest / Neck / Head keyframes
+- provenance-tracked Clear Bake via `meta.upperBodySolverBake`
+- Animation QA and Balance QA sample the complete response chain
+- exported lightweight game runtime applies the upper-body weight response
 
 ### Existing foundation retained
 
 - CharacterSpec V1 as source of truth
 - Blocky humanoid procedural generator
 - THREE.Group rigid pivot rig
-- Body mass / equipment mass / COM / support area
+- Body mass / equipment mass / Center of Mass / support area
 - Pose Library / pose delta / joint chains
 - Authored Animation Timeline and keyframes
 - Procedural animation baking
 - Weight & foot-contact timeline
 - Foot sliding inspector / Foot Lock Assist
-- V1.1 Weight Transfer Curve
+- V1.1 continuous Weight Transfer Curve
+- V1.2 Weight-Driven Pelvis Solver / COM feedback
 - Animation Quality Inspector
 - Runtime states, transitions and animation events
 - img2threejs staging adapter
@@ -50,6 +52,6 @@ Future development must **continue from the latest committed/checkpointed versio
 
 Realism roadmap:
 
-V1.0 COM & Support → V1.1 Weight Transfer Curve → **V1.2 Weight-driven Pelvis** → V1.3 Spine/Chest/Head Response → V1.4 Compression/Impact → V1.5 Momentum → V1.6 Equipment Mass Response → V1.7 Attack Weight → V1.8 Foot Plant/IK → V1.9 Weight QA → V2.0 Animation Weight Studio.
+V1.0 COM & Support → V1.1 Weight Transfer Curve → V1.2 Weight-driven Pelvis → **V1.3 Spine/Chest/Neck/Head Response** → V1.4 Compression/Impact/Recovery → V1.5 Momentum → V1.6 Equipment Mass Response → V1.7 Attack Weight → V1.8 Foot Plant/IK → V1.9 Weight QA → V2.0 Animation Weight Studio.
 
-See `checkpoints/v1.2/` for the V1.2 checkpoint notes and solver contract.
+See `checkpoints/v1.3/` for the current V1.3 checkpoint notes and response-chain contract.
