@@ -1,59 +1,42 @@
 # 3JS Player Block Asset Engine
 
-Checkpoint repository for **Three.js Character Prototype Studio**.
+Current live checkpoint: **Character Prototype Studio V1.8 — High-Quality Skin & PBR Material System**.
 
-## Current checkpoint
+Live GitHub Pages:
 
-**V1.6 — Equipment Mass Response**
+https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
-The project is a mobile-first Three.js tool for building blocky / stylized characters, editing rigid pivot rigs, authoring poses and animation clips, validating animation quality, exporting game-ready animation runtime assets, and progressively adding believable weight, balance, impact, inertia and equipment-load response.
+## Current pipeline
 
-### Current pipeline
+CharacterSpec → Blocky/Big-Head Geometry → Rigid Pivot Rig → Pose/Animation → Foot Contact → Weight Transfer → COM/Pelvis → Upper Body Response → Impact/Recovery → Momentum → Equipment Mass → Attack Weight → **High-Quality Skin/PBR** → Runtime Export.
 
-Reference / Concept → img2threejs Adapter → CharacterSpec → Body / Rig / LookDev → Pose Library → Animation Timeline → Foot Contact → Weight Transfer Curve → Weight-Driven Pelvis → Upper Body Weight Response → Impact / Compression / Recovery → Momentum / Acceleration / Braking → **Equipment Mass Response** → Animation QA / Balance QA → Game Animation Runtime → Export
+## V1.8
 
-### V1.6 additions
+- High-Quality Skin Library
+- PBR maps: BaseColor / Normal / Roughness / Metalness / AO / Emissive
+- material slots: skin / shirt / pants / accent / boots / hair / eyes
+- part-to-material mapping
+- UV repeat / offset / rotation / normal strength
+- custom high-resolution PBR map import
+- Texture Quality Gate: **2048×2048 minimum master source**
+- no low-resolution upscaling as a master asset
+- runtime-derived 2048 / 1024 / 512 tiers
+- starter 2K material pack generated reproducibly during Pages build
 
-- equipment identity / category / attachment socket / mass profile
-- presets: None / Sword / Great Sword / Hammer
-- socket-aware equipment contribution to Center of Mass
-- carrying-side shoulder drop
-- chest counter-balance
-- pelvis counter-shift
-- stance widening under heavy load
-- momentum inertia scales with equipment load
-- action recovery slows under heavy load
-- Preview / Bake / Clear Bake workflow
-- exported AnimationRuntime supports the same equipment-load response
-- gameplay ownership remains outside animation: inventory, combat, world position and collision are not owned by this system
+## Repository / Pages asset strategy
 
-### Existing foundation retained
+V1.8 now needs many high-resolution texture files. To keep Git history manageable while still serving real files on GitHub Pages:
 
-- CharacterSpec V1 as source of truth
-- Blocky humanoid procedural generator
-- THREE.Group rigid pivot rig
-- Body mass / Center of Mass / support area
-- Pose Library / pose delta / joint chains
-- Authored Animation Timeline and keyframes
-- Procedural animation baking
-- Weight & foot-contact timeline
-- Foot sliding inspector / Foot Lock Assist
-- V1.1 continuous Weight Transfer Curve
-- V1.2 Weight-Driven Pelvis Solver / COM feedback
-- V1.3 Chest / Neck / Head weight-response chain
-- V1.4 Impact / Compression / Recovery
-- V1.5 Momentum / Acceleration / Braking / Turn Inertia
-- Animation Quality Inspector
-- Runtime states, transitions and animation events
-- img2threejs staging adapter
-- Game-oriented runtime/export contracts
+1. The exact V1.8 HTML source is stored losslessly in `deploy/source_v1_8/` as gzip+base64 parts.
+2. `scripts/build_pages.py` reconstructs the exact HTML during CI.
+3. `scripts/generate_textures.py` creates the native 2K PBR starter texture files.
+4. `scripts/verify_textures.py` blocks deployment if any generated master texture is below 2048px.
+5. GitHub Actions publishes `_site/index.html` plus `assets/textures/*` to Pages.
+
+This means the live site still serves many normal image files from `assets/textures/`; the repository does not need to accumulate large generated binary copies on every checkpoint.
 
 ## Development rule
 
-Future development must **continue from the latest committed/checkpointed version of this project instead of rebuilding the Studio from scratch**.
+Continue from the latest checkpoint. Do not rebuild the Studio from scratch.
 
-Realism roadmap:
-
-V1.0 COM & Support → V1.1 Weight Transfer Curve → V1.2 Weight-driven Pelvis → V1.3 Spine/Chest/Neck/Head Response → V1.4 Compression/Impact/Recovery → V1.5 Momentum → **V1.6 Equipment Mass Response** → V1.7 Attack Weight → V1.8 Foot Plant/IK → V1.9 Weight QA → V2.0 Animation Weight Studio.
-
-See `checkpoints/v1.6/` for the current checkpoint notes and equipment-weight contract.
+Next planned phase: **V1.9 — Weapon Attachment & Sample Weapon Kit**, reusing the V1.8 PBR pipeline for blade, guard, handle and emissive weapon materials.

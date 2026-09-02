@@ -1,0 +1,6 @@
+_site/
+assets/textures/*.png
+assets/textures/*.webp
+assets/textures/texture_manifest.json
+assets/textures/quality_report.json
+__pycache__/
