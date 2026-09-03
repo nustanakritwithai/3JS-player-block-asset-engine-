@@ -71,12 +71,24 @@
     },
     "rig": {
       "type": "object",
-      "required": ["architecture", "schema", "root", "jointNames", "sockets"],
+      "required": ["architecture", "schema", "root", "jointNames", "jointBindings", "sockets"],
       "properties": {
         "architecture": { "const": "THREE.Group" },
         "schema": { "const": "studio-rig-v1" },
         "root": { "type": "string" },
         "jointNames": { "type": "array", "items": { "type": "string" } },
+        "jointBindings": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+              "nodeName": { "type": ["string", "null"] }
+            }
+          }
+        },
         "sockets": {
           "type": "object",
           "required": ["rightHand", "leftHand", "head", "back", "waist", "vfxOrigin", "attackOrigin", "throwOrigin"],
