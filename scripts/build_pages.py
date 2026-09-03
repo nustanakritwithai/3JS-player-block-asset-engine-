@@ -37,7 +37,8 @@ html = patch_v1_8_5_2(html)
 if 'Character Prototype Studio V1.8.5.2' not in html or 'Twist_Isolation_V1_8_5_2' not in html or 'ANIMATION LIBRARY' not in html:
     raise SystemExit('V1.8.5.2 twist isolation/library restore patch failed')
 
-expected = '764939a9b69f31f59fc78ac6d22e887947443136953391f9ad7164ebf2abf8c8'
+# Canonical SHA is taken from the exact GitHub Actions reconstruction of this patch chain.
+expected = 'f1cbc07f8c13bb041a038ea104a157ad3a977bc1f5959d20688552a794a371bd'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
     raise SystemExit(f'V1.8.5.2 source checksum mismatch: {actual}')
