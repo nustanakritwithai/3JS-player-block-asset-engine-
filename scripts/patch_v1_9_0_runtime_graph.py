@@ -61,6 +61,16 @@ function pocketRuntimeSceneGraphV190(root,stats){
   const visit=node=>{counts.nodes++;if(node.nodeType==="mesh"){counts.meshes++;const pos=node.geometry?.attributes?.position;counts.vertices+=Number(pos?.count)||0;const idx=node.geometry?.index?.count;counts.triangles+=idx?Math.floor(idx/3):Math.floor((Number(pos?.count)||0)/3);const mats=Array.isArray(node.material)?node.material:[node.material];for(const mat of mats)for(const ref of Object.values(mat?.maps||{}))countTexture(ref)}for(const child of node.children||[])visit(child)};
   visit(graph);return {schema:"three-group-scenegraph-v1",root:graph,stats:counts};
 }
+function pocketRuntimeJointBindingsV190(root){
+  const paths=new Map();
+  const visit=(node,path)=>{paths.set(node,path);(node?.children||[]).forEach((child,index)=>visit(child,[...path,index]))};
+  visit(root,[]);const bindings={};
+  for(const [jointKey,node] of Object.entries(joints||{})){
+    const path=paths.get(node);if(!path)continue;
+    bindings[jointKey]={path,nodeName:node?.name||null};
+  }
+  return bindings;
+}
 
 '''+anchor
     rep(anchor, funcs, 'runtime scene graph serializer')
@@ -69,8 +79,12 @@ function pocketRuntimeSceneGraphV190(root,stats){
         '''    character:cleanSpec,\n    sceneGraph:pocketRuntimeSceneGraphV190(characterRoot,stats),\n    rig:{architecture:"THREE.Group"''',
         'runtime scene graph package field')
 
+    rep('''    rig:{architecture:"THREE.Group",schema:"studio-rig-v1",root:"characterRoot",jointNames:Object.keys(joints||{}),sockets},''',
+        '''    rig:{architecture:"THREE.Group",schema:"studio-rig-v1",root:"characterRoot",jointNames:Object.keys(joints||{}),jointBindings:pocketRuntimeJointBindingsV190(characterRoot),sockets},''',
+        'deterministic joint bindings')
+
     rep('''  if(!pkg?.rig?.sockets?.rightHand||!pkg?.rig?.sockets?.leftHand)errors.push("hand sockets missing");\n  const leaks=pocketRuntimeGameplayLeaksV190(pkg);''',
-        '''  if(!pkg?.rig?.sockets?.rightHand||!pkg?.rig?.sockets?.leftHand)errors.push("hand sockets missing");\n  if(pkg?.sceneGraph?.schema!=="three-group-scenegraph-v1"||!pkg?.sceneGraph?.root)errors.push("portable scene graph missing");\n  if(!(pkg?.sceneGraph?.stats?.meshes>0))warnings.push("scene graph contains no mesh nodes");\n  if(pkg?.sceneGraph?.stats?.externalTextureRefs)warnings.push(`${pkg.sceneGraph.stats.externalTextureRefs} texture map reference(s) remain external; material scalar fallback is included`);\n  const leaks=pocketRuntimeGameplayLeaksV190(pkg);''',
+        '''  if(!pkg?.rig?.sockets?.rightHand||!pkg?.rig?.sockets?.leftHand)errors.push("hand sockets missing");\n  if(!pkg?.rig?.jointBindings||!Object.keys(pkg.rig.jointBindings).length)errors.push("joint bindings missing");\n  if(pkg?.sceneGraph?.schema!=="three-group-scenegraph-v1"||!pkg?.sceneGraph?.root)errors.push("portable scene graph missing");\n  if(!(pkg?.sceneGraph?.stats?.meshes>0))warnings.push("scene graph contains no mesh nodes");\n  if(pkg?.sceneGraph?.stats?.externalTextureRefs)warnings.push(`${pkg.sceneGraph.stats.externalTextureRefs} texture map reference(s) remain external; material scalar fallback is included`);\n  const leaks=pocketRuntimeGameplayLeaksV190(pkg);''',
         'runtime scene graph validation')
 
     return html
