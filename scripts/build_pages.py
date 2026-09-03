@@ -22,6 +22,7 @@ from patch_v1_8_5_2 import patch as patch_v1_8_5_2
 from patch_v1_8_5_3 import patch as patch_v1_8_5_3
 from patch_v1_8_6 import patch as patch_v1_8_6
 from patch_v1_8_7 import patch as patch_v1_8_7
+from patch_v1_8_8 import patch as patch_v1_8_8
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -52,11 +53,14 @@ html = patch_v1_8_7(html)
 if 'Character Prototype Studio V1.8.7' not in html or 'FOOT PLANT + LEG RESPONSE' not in html or 'applyRuntimeFootPlantLegResponse' not in html:
     raise SystemExit('V1.8.7 Foot Plant + Leg Response patch failed')
 
-# Expected SHA from the exact deployed V1.8.6 Pages artifact plus deterministic V1.8.7 patch.
-expected = 'c10931c3f45731c9ca9704b0989f57d534a90efd2d98d1069b145d90e2627668'
+html = patch_v1_8_8(html)
+if 'Character Prototype Studio V1.8.8' not in html or 'Jump_Core' not in html or 'Crouch_Walk_Core' not in html:
+    raise SystemExit('V1.8.8 Core Movement Animation Pack patch failed')
+
+expected = '5a65bdd90694fb7f81b4d734700eac5c8d1737ec860d9db42ae9357a9e9f2698'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.7 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.8 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -66,5 +70,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.7 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.7 patch chain')
+print(f'Built V1.8.8 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.8 patch chain')
 print('sha256', actual)
