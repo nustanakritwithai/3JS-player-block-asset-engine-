@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import base64, lzma, shutil, hashlib, sys
+import base64, lzma, shutil, hashlib, json, sys
 
 root = Path(__file__).resolve().parents[1]
 parts_dir = root / 'deploy' / 'source_v1_8_4' / 'parts'
@@ -25,6 +25,7 @@ from patch_v1_8_7 import patch as patch_v1_8_7
 from patch_v1_8_8 import patch as patch_v1_8_8
 from patch_v1_8_9 import patch as patch_v1_8_9
 from patch_v1_8_10 import patch as patch_v1_8_10
+from patch_v1_9_0 import patch as patch_v1_9_0
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -83,6 +84,42 @@ required_v1810 = [
 for token in required_v1810:
     if token not in html:
         raise SystemExit('V1.8.10 Core Animation QA / Transitions patch failed: ' + token)
+v1810_actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
+
+html = patch_v1_9_0(html)
+required_v190 = [
+    'Character Prototype Studio V1.9.0',
+    'POCKET MONSTER RUNTIME EXPORT',
+    'id="pocketRuntimeExportBox"',
+    'id="pocketRuntimeCharacterId"',
+    'id="btnPreviewPocketRuntime"',
+    'id="btnExportPocketRuntime"',
+    'pocket-character-runtime-v1',
+    'studio-character',
+    'presentation-only',
+    'POCKET_RUNTIME_FORBIDDEN_KEYS_V1_9_0',
+    'sanitizePocketRuntimeValueV190',
+    'validatePocketRuntimePackageV190',
+    'buildPocketRuntimePackageV190',
+    'exportPocketRuntimePackageV190',
+    'gameplayPolicy:{included:false',
+    'architecture:"THREE.Group"',
+    'rightHand:{joint:',
+    'throwOrigin:{joint:',
+    '.pocket-character.json',
+]
+for token in required_v190:
+    if token not in html:
+        raise SystemExit('V1.9.0 Pocket Runtime Character Export patch failed: ' + token)
+
+schema_path = root / 'schemas' / 'pocket-character-runtime-v1.schema.json'
+if not schema_path.exists():
+    raise SystemExit('V1.9.0 runtime schema missing')
+schema = json.loads(schema_path.read_text(encoding='utf-8'))
+if schema.get('properties', {}).get('schema', {}).get('const') != 'pocket-character-runtime-v1':
+    raise SystemExit('V1.9.0 runtime schema id mismatch')
+if schema.get('properties', {}).get('target', {}).get('properties', {}).get('provider', {}).get('const') != 'studio-character':
+    raise SystemExit('V1.9.0 runtime schema provider mismatch')
 
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 
@@ -93,7 +130,10 @@ site.mkdir(parents=True)
 (site / 'index.html').write_text(html, encoding='utf-8')
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
+if (root / 'schemas').exists():
+    shutil.copytree(root / 'schemas', site / 'schemas', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.10 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.10 patch chain')
+print(f'Built V1.9.0 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.9.0 patch chain')
 print('base-v1.8.9-sha256', base_actual)
+print('v1.8.10-sha256', v1810_actual)
 print('sha256', actual)
