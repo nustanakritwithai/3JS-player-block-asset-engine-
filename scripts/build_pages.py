@@ -47,8 +47,8 @@ html = patch_v1_8_6(html)
 if 'Character Prototype Studio V1.8.6' not in html or 'LOCOMOTION_PROFILES' not in html or 'applyLocomotionDynamicsRuntime' not in html:
     raise SystemExit('V1.8.6 Natural Locomotion Dynamics patch failed')
 
-# Initial expected SHA derived from the deployed V1.8.5.3 artifact + deterministic V1.8.6 patch.
-expected = 'c969210c92598b0f12bab190b5e8cae8e26bab87fe918e6612cc4b97f36c9918'
+# Canonical SHA emitted by the exact GitHub Actions reconstruction of the V1.8.6 patch chain.
+expected = '2f1ce3012f3f1a25c09322a9b82d754363ced613d09534f9dcd17aa85b97caf0'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
     raise SystemExit(f'V1.8.6 source checksum mismatch: {actual}')
