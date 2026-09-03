@@ -14,16 +14,23 @@ if 'Character Prototype Studio V1.8.4' not in html:
     raise SystemExit('Reconstructed source is not V1.8.4')
 
 sys.path.insert(0, str(root / 'scripts'))
-from patch_v1_8_4_1 import patch
-html = patch(html)
+from patch_v1_8_4_1 import patch as patch_v1_8_4_1
+from patch_v1_8_5 import patch as patch_v1_8_5
+from patch_v1_8_5_guard import patch as patch_v1_8_5_guard
 
+html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
     raise SystemExit('V1.8.4.1 twist activation patch failed')
 
-expected = '3e84a4e259dd7fcec4976bb000c59d0a0911c0249f07d6fd30b2b940cdfd51a2'
+html = patch_v1_8_5(html)
+html = patch_v1_8_5_guard(html)
+if 'Character Prototype Studio V1.8.5' not in html or 'DYNAMICS AUTO-TUNER' not in html:
+    raise SystemExit('V1.8.5 Dynamics Auto-Tuner patch failed')
+
+expected = 'a4e9487ace9f870e75671c57b7721045d3ab091dc669a450776d528625afec13'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.4.1 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.5 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -33,5 +40,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.4.1 {len(html.encode("utf-8"))} bytes from V1.8.4 + hotfix patch')
+print(f'Built V1.8.5 {len(html.encode("utf-8"))} bytes from V1.8.4 + V1.8.4.1 + V1.8.5 patches')
 print('sha256', actual)
