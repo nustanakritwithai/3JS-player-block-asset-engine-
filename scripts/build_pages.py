@@ -16,16 +16,18 @@ if 'Character Prototype Studio V1.8.4' not in html:
 sys.path.insert(0, str(root / 'scripts'))
 from patch_v1_8_4_1 import patch as patch_v1_8_4_1
 from patch_v1_8_5 import patch as patch_v1_8_5
+from patch_v1_8_5_guard import patch as patch_v1_8_5_guard
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
     raise SystemExit('V1.8.4.1 twist activation patch failed')
 
 html = patch_v1_8_5(html)
+html = patch_v1_8_5_guard(html)
 if 'Character Prototype Studio V1.8.5' not in html or 'DYNAMICS AUTO-TUNER' not in html:
     raise SystemExit('V1.8.5 Dynamics Auto-Tuner patch failed')
 
-expected = '7c4d6e01c75c777e94714411b8b4e529e32d3282a311b192470c5dc4d09619e6'
+expected = 'a4e9487ace9f870e75671c57b7721045d3ab091dc669a450776d528625afec13'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
     raise SystemExit(f'V1.8.5 source checksum mismatch: {actual}')
