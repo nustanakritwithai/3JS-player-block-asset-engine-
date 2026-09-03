@@ -1,10 +1,10 @@
-name: Deploy Character Studio V1.8.10 to Pages
+name: Deploy Character Studio V1.9.0 to Pages
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feat/v1.8.10-core-animation-qa-transitions-v2]
   workflow_dispatch:
 
 permissions:
@@ -37,18 +37,18 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10 Pages artifact
+      - name: Build V1.9.0 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.10 core animation QA transitions and regression gates
+      - name: Verify V1.9.0 Pocket runtime export and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
+          import json, re
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10')
+              raise SystemExit('duplicate DOM ids in V1.9.0')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
@@ -73,44 +73,57 @@ jobs:
               'Interact_Core',
               'core-action-reaction-pack',
               'interact.commit',
+              'CORE ANIMATION QA / TRANSITIONS',
+              'CORE_ANIMATION_TRANSITIONS_V1_8_10',
+              'runCoreAnimationQaV1810',
+              'RECOVERY_SUPPORT',
+              'LOOP_SEAM',
               'Weapon ยังไม่เริ่ม'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'CORE ANIMATION QA / TRANSITIONS',
-              'id="coreAnimationQaBox"',
-              'id="btnRunCoreAnimationQa"',
-              'id="btnStampCoreTransitions"',
-              'id="btnPreviewMovementChain"',
-              'id="btnPreviewAirChain"',
-              'id="btnPreviewRecoveryChain"',
-              'CORE_ANIMATION_TRANSITIONS_V1_8_10',
-              'CORE_ANIMATION_RECOVERY_V1_8_10',
-              'core-transition-v1',
-              'studioVersion:"1.8.10"',
-              'stampCoreTransitionContractV1810',
-              'runCoreAnimationQaV1810',
-              'previewCoreTransitionSequenceV1810',
-              'LOOP_SEAM',
-              'AIR_CONTACT',
-              'LAND_SUPPORT',
-              'RECOVERY_SUPPORT',
-              'TERMINAL_EXIT',
-              'addTemplateClipV1810Base',
-              'upgradeExistingCoreTransitionsV1810'
+              'POCKET MONSTER RUNTIME EXPORT',
+              'id="pocketRuntimeExportBox"',
+              'id="pocketRuntimeCharacterId"',
+              'id="pocketRuntimeCharacterName"',
+              'id="btnPreviewPocketRuntime"',
+              'id="btnExportPocketRuntime"',
+              'POCKET_RUNTIME_SCHEMA_V1_9_0="pocket-character-runtime-v1"',
+              'POCKET_RUNTIME_PROVIDER_V1_9_0="studio-character"',
+              'POCKET_RUNTIME_FORBIDDEN_KEYS_V1_9_0',
+              'sanitizePocketRuntimeValueV190',
+              'pocketRuntimeGameplayLeaksV190',
+              'validatePocketRuntimePackageV190',
+              'buildPocketRuntimePackageV190',
+              'exportPocketRuntimePackageV190',
+              'contract:"presentation-only"',
+              'gameplayPolicy:{included:false',
+              'architecture:"THREE.Group"',
+              'assetHandleContract:["root","rig","play","update","anchor","bounds","setAppearance","dispose"]',
+              'rightHand:{joint:',
+              'leftHand:{joint:',
+              'attackOrigin:{joint:',
+              'throwOrigin:{joint:',
+              '.pocket-character.json',
+              'crypto.subtle.digest("SHA-256"'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10 transition/QA gate: '+token)
+                  raise SystemExit('missing V1.9.0 runtime export gate: '+token)
+          schema=json.loads(Path('_site/schemas/pocket-character-runtime-v1.schema.json').read_text(encoding='utf-8'))
+          if schema['properties']['schema']['const']!='pocket-character-runtime-v1':
+              raise SystemExit('runtime package schema mismatch')
+          if schema['properties']['target']['properties']['provider']['const']!='studio-character':
+              raise SystemExit('runtime package provider schema mismatch')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v1810.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10 core animation QA/transition regression gates passed')
+          Path('/tmp/studio-v190.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.9.0 Pocket runtime export regression gates passed')
           PY
-          node --check /tmp/studio-v1810.mjs
+          node --check /tmp/studio-v190.mjs
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'

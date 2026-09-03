@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/schemas/pocket-character-runtime-v1.schema.json",
+  "title": "Pocket Monster Runtime Character Package v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schemaVersion",
+    "generatedBy",
+    "target",
+    "manifest",
+    "catalogEntry",
+    "character",
+    "sceneGraph",
+    "rig",
+    "animations",
+    "animationIndex",
+    "acceptance",
+    "gameplayPolicy",
+    "transport",
+    "integrity",
+    "validation"
+  ],
+  "properties": {
+    "schema": { "const": "pocket-character-runtime-v1" },
+    "schemaVersion": { "const": "1.0.0" },
+    "generatedBy": {
+      "type": "object",
+      "required": ["product", "studioVersion", "generatorVersion", "generatedAt"],
+      "properties": {
+        "product": { "type": "string" },
+        "studioVersion": { "const": "1.9.0" },
+        "generatorVersion": { "const": "1.9.0" },
+        "generatedAt": { "type": "string" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["game", "assetEngine", "provider", "assetHandleContract"],
+      "properties": {
+        "game": { "const": "PocketMonster" },
+        "assetEngine": { "const": "asset-presentation" },
+        "provider": { "const": "studio-character" },
+        "assetHandleContract": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "manifest": { "$ref": "#/$defs/assetDefinition" },
+    "catalogEntry": { "$ref": "#/$defs/assetDefinition" },
+    "character": { "type": "object" },
+    "sceneGraph": {
+      "type": "object",
+      "required": ["schema", "root", "stats"],
+      "properties": {
+        "schema": { "const": "three-group-scenegraph-v1" },
+        "root": { "$ref": "#/$defs/sceneNode" },
+        "stats": {
+          "type": "object",
+          "required": ["nodes", "meshes", "vertices", "triangles", "externalTextureRefs"],
+          "properties": {
+            "nodes": { "type": "integer", "minimum": 1 },
+            "meshes": { "type": "integer", "minimum": 0 },
+            "vertices": { "type": "integer", "minimum": 0 },
+            "triangles": { "type": "integer", "minimum": 0 },
+            "externalTextureRefs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "rig": {
+      "type": "object",
+      "required": ["architecture", "schema", "root", "jointNames", "jointBindings", "sockets"],
+      "properties": {
+        "architecture": { "const": "THREE.Group" },
+        "schema": { "const": "studio-rig-v1" },
+        "root": { "type": "string" },
+        "jointNames": { "type": "array", "items": { "type": "string" } },
+        "jointBindings": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+              "nodeName": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "sockets": {
+          "type": "object",
+          "required": ["rightHand", "leftHand", "head", "back", "waist", "vfxOrigin", "attackOrigin", "throwOrigin"],
+          "additionalProperties": { "$ref": "#/$defs/socket" }
+        }
+      }
+    },
+    "animations": { "type": "array", "items": { "type": "object" } },
+    "animationIndex": { "type": "array", "items": { "type": "object" } },
+    "acceptance": { "type": "object" },
+    "gameplayPolicy": {
+      "type": "object",
+      "required": ["included", "authority", "forbiddenKeys", "strippedFields"],
+      "properties": {
+        "included": { "const": false },
+        "authority": { "type": "string" },
+        "forbiddenKeys": { "type": "array", "items": { "type": "string" } },
+        "strippedFields": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "required": ["format", "extension", "encoding"],
+      "properties": {
+        "format": { "const": "single-json-envelope" },
+        "extension": { "const": ".pocket-character.json" },
+        "encoding": { "const": "utf-8" }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["algorithm", "sha256", "canonicalBytes"],
+      "properties": {
+        "algorithm": { "enum": ["SHA-256", "none"] },
+        "sha256": { "type": ["string", "null"] },
+        "canonicalBytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["valid", "errors", "warnings"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "assetDefinition": {
+      "type": "object",
+      "required": ["id", "kind", "provider", "style", "surfaceStyle", "rig", "metrics", "roles"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^character\\." },
+        "name": { "type": "string" },
+        "kind": { "const": "character" },
+        "provider": { "const": "studio-character" },
+        "contract": { "const": "presentation-only" },
+        "style": { "type": "string" },
+        "surfaceStyle": { "type": "string" },
+        "rig": { "type": "string" },
+        "metrics": {
+          "type": "object",
+          "required": ["height"],
+          "properties": { "height": { "type": "number", "exclusiveMinimum": 0 } }
+        },
+        "roles": { "type": "object" }
+      }
+    },
+    "socket": {
+      "type": "object",
+      "required": ["joint", "offset"],
+      "properties": {
+        "joint": { "type": "string" },
+        "offset": {
+          "type": "array",
+          "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "sceneNode": {
+      "type": "object",
+      "required": ["name", "nodeType", "visible", "transform", "userData", "children"],
+      "properties": {
+        "name": { "type": "string" },
+        "nodeType": { "enum": ["group", "mesh"] },
+        "visible": { "type": "boolean" },
+        "transform": {
+          "type": "object",
+          "required": ["position", "rotation", "scale"],
+          "properties": {
+            "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+            "rotation": { "type": "array", "minItems": 4, "maxItems": 4 },
+            "scale": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } }
+          }
+        },
+        "userData": { "type": "object" },
+        "geometry": { "type": ["object", "null"] },
+        "material": { "type": ["object", "array", "null"] },
+        "castShadow": { "type": "boolean" },
+        "receiveShadow": { "type": "boolean" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/sceneNode" } }
+      }
+    }
+  }
+}
