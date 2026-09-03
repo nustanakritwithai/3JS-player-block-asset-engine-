@@ -60,7 +60,7 @@ if 'Character Prototype Studio V1.8.8' not in html or 'Jump_Core' not in html or
     raise SystemExit('V1.8.8 Core Movement Animation Pack patch failed')
 
 html = patch_v1_8_9(html)
-if 'Character Prototype Studio V1.8.9' not in html or 'Dodge_R_Core' not in html or 'Interact_Core' not in html:
+if 'Character Prototype Studio V1.8.9' not in html or 'createDodgeCoreTemplate' not in html or 'Interact_Core' not in html:
     raise SystemExit('V1.8.9 Core Action / Reaction Pack patch failed')
 
 base_expected = 'a3d19d2cd7cdd9aee7936d20f6caf978d3f37ac04044d6bdb77e4a4d4b91a1be'
