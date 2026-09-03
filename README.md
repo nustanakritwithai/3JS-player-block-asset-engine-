@@ -1,6 +1,6 @@
 # 3JS Player Block Asset Engine
 
-Current live checkpoint: **Character Prototype Studio V1.8 — High-Quality Skin & PBR Material System**.
+Current live checkpoint: **Character Prototype Studio V1.8.4 — Action Dynamics Inspector**.
 
 Live GitHub Pages:
 
@@ -8,35 +8,43 @@ https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
 ## Current pipeline
 
-CharacterSpec → Blocky/Big-Head Geometry → Rigid Pivot Rig → Pose/Animation → Foot Contact → Weight Transfer → COM/Pelvis → Upper Body Response → Impact/Recovery → Momentum → Equipment Mass → Attack Weight → **High-Quality Skin/PBR** → Runtime Export.
+CharacterSpec → Blocky/Big-Head Geometry → Rigid Pivot Rig → Pose/Animation → Foot Contact → Weight Transfer → COM/Pelvis → Upper Body Response → Impact/Recovery → Momentum → Equipment Mass → Attack Weight → High-Quality Skin/PBR → **Natural Walk → Full-Body Twist Chain → Action-Specific Dynamics → Action Dynamics Inspector** → Runtime Export.
 
-## V1.8
+## V1.8.4
 
-- High-Quality Skin Library
-- PBR maps: BaseColor / Normal / Roughness / Metalness / AO / Emissive
-- material slots: skin / shirt / pants / accent / boots / hair / eyes
-- part-to-material mapping
-- UV repeat / offset / rotation / normal strength
-- custom high-resolution PBR map import
-- Texture Quality Gate: **2048×2048 minimum master source**
-- no low-resolution upscaling as a master asset
-- runtime-derived 2048 / 1024 / 512 tiers
-- starter 2K material pack generated reproducibly during Pages build
+V1.8.4 continues directly from V1.8.3 and adds production QA for action-body dynamics:
 
-## Repository / Pages asset strategy
+- Pelvis → Chest → Shoulder → Arm kinetic-chain peak timing
+- angular velocity / angular acceleration checks
+- abrupt high-speed reversal detection
+- head stabilization / head-follow ratio
+- natural soft-range pressure
+- foot-support and Center-of-Mass conflict checks
+- Kick opposite-support-foot checks
+- recovery residual checks
+- Thrust and Dodge action-specific checks
+- clickable P/C/S/A peak timeline and issue timestamps
+- Normal / Strict / Lenient QA sensitivity
+- persisted `clip.bodyDynamics.qa` results with `PASS / BLOCKED / STALE`
+- validation warns on missing/stale Inspector results and blocks current hard QA issues
 
-V1.8 now needs many high-resolution texture files. To keep Git history manageable while still serving real files on GitHub Pages:
+## Recent animation development
 
-1. The exact V1.8 HTML source is stored losslessly in `deploy/source_v1_8/` as gzip+base64 parts.
-2. `scripts/build_pages.py` reconstructs the exact HTML during CI.
-3. `scripts/generate_textures.py` creates the native 2K PBR starter texture files.
-4. `scripts/verify_textures.py` blocks deployment if any generated master texture is below 2048px.
-5. GitHub Actions publishes `_site/index.html` plus `assets/textures/*` to Pages.
+- **V1.8.1** — Natural Walk tuning; reduced excessive left/right pelvis sway
+- **V1.8.2** — Full-Body Twist Chain with Pelvis lead, Chest/Shoulder/Arm lag and head stabilization
+- **V1.8.3** — Action-Specific Dynamics for Punch, Slash, Heavy Slash, Thrust, Kick and Dodge
+- **V1.8.4** — Action Dynamics Inspector / kinetic-chain QA
 
-This means the live site still serves many normal image files from `assets/textures/`; the repository does not need to accumulate large generated binary copies on every checkpoint.
+## High-quality texture rule
+
+Stylized High Quality character skins use high-resolution master assets. The Pages workflow generates the starter PBR texture pack natively at 2048×2048 and blocks deployment if the texture quality gate fails.
+
+## Repository / Pages strategy
+
+The exact V1.8.4 HTML is stored losslessly in `deploy/source_v1_8_4/parts/` as XZ + Base64 parts. `scripts/build_pages.py` reconstructs it during CI and validates SHA-256 before publishing. High-resolution PBR starter textures are generated into `assets/textures/` during the Pages build.
 
 ## Development rule
 
-Continue from the latest checkpoint. Do not rebuild the Studio from scratch.
+Future development must **continue from the latest committed/checkpointed version instead of rebuilding the Studio from scratch**.
 
-Next planned phase: **V1.9 — Weapon Attachment & Sample Weapon Kit**, reusing the V1.8 PBR pipeline for blade, guard, handle and emissive weapon materials.
+The current source checkpoint is `checkpoints/v1.8.4/`.
