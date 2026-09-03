@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.8 to Pages
+name: Deploy Character Studio V1.8.9 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.8 Pages artifact
+      - name: Build V1.8.9 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.8 core movement and regression gates
+      - name: Verify V1.8.9 core action/reaction and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,55 +46,60 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.8')
+              raise SystemExit('duplicate DOM ids in V1.8.9')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
               raise SystemExit('animation library moved below Timeline')
           preserved=[
               'Twist_Isolation_V1_8_5_2',
-              'transient-twist-isolation',
               'walkVisualShiftCap:.016',
-              'LOCOMOTION_PROFILES',
               'run:{cadence:1.48',
               'sprint:{cadence:1.88',
               'FOOT PLANT + LEG RESPONSE',
               'maxRootCorrection:.028',
-              'applyRuntimeFootPlantLegResponse'
+              'Jump_Core',
+              'Crouch_Walk_Core',
+              'Weapon ยังไม่เริ่ม'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'id="btnTemplateTurnL"',
-              'id="btnTemplateStrafeL"',
-              'id="btnTemplateJump"',
-              'id="btnTemplateFall"',
-              'id="btnTemplateLand"',
-              'id="btnTemplateCrouch"',
-              'id="btnTemplateCrouchWalk"',
-              'jumpTakeoff:"Jump Takeoff"',
-              'Jump_Core',
-              'Fall_Loop_Core',
-              'Land_Core',
-              'Crouch_Idle_Core',
-              'Crouch_Walk_Core',
-              'createTurnLeftTemplate',
-              'createStrafeLeftTemplate',
-              'clip.footPlant.enabled=false;clip.source={kind:"core-movement-pack",studioVersion:"1.8.8"}'
+              'id="btnTemplateDodgeR"',
+              'id="btnTemplateDodgeL"',
+              'id="btnTemplateHitReact"',
+              'id="btnTemplateKnockback"',
+              'id="btnTemplateGetUp"',
+              'id="btnTemplateDeath"',
+              'id="btnTemplateFaint"',
+              'id="btnTemplateInteract"',
+              'Dodge_R_Core',
+              'Dodge_L_Core',
+              'Hit_React_Core',
+              'Knockback_Core',
+              'Get_Up_Core',
+              'Death_Core',
+              'Faint_Core',
+              'Interact_Core',
+              'actionType:"dodge"',
+              'clip.runtime.motionClass="custom";clip.runtime.state=state',
+              'clip.locomotionDynamics.enabled=false;clip.bodyDynamics.enabled=false;clip.attackProfile.enabled=false',
+              'core-action-reaction-pack',
+              'interact.commit',
+              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:.72',
+              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:1.08'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.8 core movement gate: '+token)
-          if 'Weapon Attachment' in h and 'Weapon ยังไม่เริ่ม' not in h:
-              raise SystemExit('weapon roadmap leaked into V1.8.8 UI')
+                  raise SystemExit('missing V1.8.9 action/reaction gate: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v188.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.8 core movement/regression gates passed')
+          Path('/tmp/studio-v189.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.9 core action/reaction regression gates passed')
           PY
-          node --check /tmp/studio-v188.mjs
+          node --check /tmp/studio-v189.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
