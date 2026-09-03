@@ -11,6 +11,7 @@
     "manifest",
     "catalogEntry",
     "character",
+    "sceneGraph",
     "rig",
     "animations",
     "animationIndex",
@@ -49,6 +50,25 @@
     "manifest": { "$ref": "#/$defs/assetDefinition" },
     "catalogEntry": { "$ref": "#/$defs/assetDefinition" },
     "character": { "type": "object" },
+    "sceneGraph": {
+      "type": "object",
+      "required": ["schema", "root", "stats"],
+      "properties": {
+        "schema": { "const": "three-group-scenegraph-v1" },
+        "root": { "$ref": "#/$defs/sceneNode" },
+        "stats": {
+          "type": "object",
+          "required": ["nodes", "meshes", "vertices", "triangles", "externalTextureRefs"],
+          "properties": {
+            "nodes": { "type": "integer", "minimum": 1 },
+            "meshes": { "type": "integer", "minimum": 0 },
+            "vertices": { "type": "integer", "minimum": 0 },
+            "triangles": { "type": "integer", "minimum": 0 },
+            "externalTextureRefs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
     "rig": {
       "type": "object",
       "required": ["architecture", "schema", "root", "jointNames", "sockets"],
@@ -137,6 +157,30 @@
           "minItems": 3,
           "maxItems": 3
         }
+      }
+    },
+    "sceneNode": {
+      "type": "object",
+      "required": ["name", "nodeType", "visible", "transform", "userData", "children"],
+      "properties": {
+        "name": { "type": "string" },
+        "nodeType": { "enum": ["group", "mesh"] },
+        "visible": { "type": "boolean" },
+        "transform": {
+          "type": "object",
+          "required": ["position", "rotation", "scale"],
+          "properties": {
+            "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+            "rotation": { "type": "array", "minItems": 4, "maxItems": 4 },
+            "scale": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } }
+          }
+        },
+        "userData": { "type": "object" },
+        "geometry": { "type": ["object", "null"] },
+        "material": { "type": ["object", "array", "null"] },
+        "castShadow": { "type": "boolean" },
+        "receiveShadow": { "type": "boolean" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/sceneNode" } }
       }
     }
   }
