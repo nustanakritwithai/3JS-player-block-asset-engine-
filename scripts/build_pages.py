@@ -24,6 +24,7 @@ from patch_v1_8_6 import patch as patch_v1_8_6
 from patch_v1_8_7 import patch as patch_v1_8_7
 from patch_v1_8_8 import patch as patch_v1_8_8
 from patch_v1_8_9 import patch as patch_v1_8_9
+from patch_v1_8_10 import patch as patch_v1_8_10
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -59,13 +60,31 @@ if 'Character Prototype Studio V1.8.8' not in html or 'Jump_Core' not in html or
     raise SystemExit('V1.8.8 Core Movement Animation Pack patch failed')
 
 html = patch_v1_8_9(html)
-if 'Character Prototype Studio V1.8.9' not in html or 'createDodgeCoreTemplate' not in html or 'Interact_Core' not in html:
+if 'Character Prototype Studio V1.8.9' not in html or 'Dodge_R_Core' not in html or 'Interact_Core' not in html:
     raise SystemExit('V1.8.9 Core Action / Reaction Pack patch failed')
 
-expected = 'a3d19d2cd7cdd9aee7936d20f6caf978d3f37ac04044d6bdb77e4a4d4b91a1be'
+base_expected = 'a3d19d2cd7cdd9aee7936d20f6caf978d3f37ac04044d6bdb77e4a4d4b91a1be'
+base_actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
+if base_actual != base_expected:
+    raise SystemExit(f'V1.8.9 source checksum mismatch before V1.8.10: {base_actual}')
+
+html = patch_v1_8_10(html)
+required_v1810 = [
+    'Character Prototype Studio V1.8.10',
+    'CORE ANIMATION QA / TRANSITIONS',
+    'CORE_ANIMATION_TRANSITIONS_V1_8_10',
+    'core-transition-v1',
+    'runCoreAnimationQaV1810',
+    'stampCoreTransitionContractV1810',
+    'previewCoreTransitionSequenceV1810',
+    'RECOVERY_SUPPORT',
+    'LOOP_SEAM',
+]
+for token in required_v1810:
+    if token not in html:
+        raise SystemExit('V1.8.10 Core Animation QA / Transitions patch failed: ' + token)
+
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
-if actual != expected:
-    raise SystemExit(f'V1.8.9 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -75,5 +94,6 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.9 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.9 patch chain')
+print(f'Built V1.8.10 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.10 patch chain')
+print('base-v1.8.9-sha256', base_actual)
 print('sha256', actual)
