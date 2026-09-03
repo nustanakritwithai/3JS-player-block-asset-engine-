@@ -26,6 +26,7 @@ from patch_v1_8_8 import patch as patch_v1_8_8
 from patch_v1_8_9 import patch as patch_v1_8_9
 from patch_v1_8_10 import patch as patch_v1_8_10
 from patch_v1_9_0 import patch as patch_v1_9_0
+from patch_v1_9_0_runtime_graph import patch as patch_v1_9_0_runtime_graph
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -87,6 +88,7 @@ for token in required_v1810:
 v1810_actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 
 html = patch_v1_9_0(html)
+html = patch_v1_9_0_runtime_graph(html)
 required_v190 = [
     'Character Prototype Studio V1.9.0',
     'POCKET MONSTER RUNTIME EXPORT',
@@ -106,6 +108,11 @@ required_v190 = [
     'architecture:"THREE.Group"',
     'rightHand:{joint:',
     'throwOrigin:{joint:',
+    'three-group-scenegraph-v1',
+    'pocketRuntimeGeometrySnapshotV190',
+    'pocketRuntimeMaterialSnapshotV190',
+    'pocketRuntimeSceneGraphV190',
+    'sceneGraph:pocketRuntimeSceneGraphV190(characterRoot,stats)',
     '.pocket-character.json',
 ]
 for token in required_v190:
