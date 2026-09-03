@@ -1,6 +1,6 @@
 # 3JS Player Block Asset Engine
 
-Current checkpoint: **Character Prototype Studio V1.8.9 — Core Action / Reaction Pack**.
+Current checkpoint: **Character Prototype Studio V1.8.10 — Monster Ball Action Pack**.
 
 Live GitHub Pages:
 
@@ -8,79 +8,96 @@ https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
 ## Current priority
 
-Complete the character's **core animation set before any Weapon Attachment work**.
+Complete the character's **main Pocket Monster gameplay animations before Weapon Attachment**.
 
-Weapon Attachment remains deferred until movement, action/reaction, and animation-transition checkpoints are visually accepted.
+The highest-priority character actions are now:
 
-## V1.8.9 — Core Action / Reaction Pack
+1. Throw a capture ball at a monster.
+2. Summon a monster from a ball.
+3. Command / direct the summoned monster.
+4. Preserve the existing movement, dodge, reaction and recovery animation foundation.
 
-V1.8.9 extends the Animation Library and Pose Library with the missing core non-weapon action/reaction states.
+Weapon Attachment remains deferred.
 
-New Animation Library templates:
+## V1.8.10 — Monster Ball Action Pack
 
-- Dodge Right
-- Dodge Left
-- Hit React
-- Knockback
-- Get Up
-- Death
-- Faint
-- Interact
+V1.8.10 makes ball throwing a first-class Body Dynamics action instead of borrowing Sword Slash/Punch behavior.
 
-New Pose Library states:
+### New Body Dynamics action
 
-- Dodge Lean
-- Hit React
-- Knockback
-- Down / Back
-- Faint
-- Interact Reach
+`actionType = throw`
 
-### Dynamics ownership
+Throw kinetic chain:
 
-- **Dodge L/R** uses the existing V1.8.3 Body Dynamics `actionType = dodge`, so the lateral evade/body lean remains part of the action-dynamics system.
-- **Hit React / Knockback / Get Up / Death / Faint / Interact** are authored `custom` states, not attack states.
-- Those reaction/custom clips explicitly disable Body Dynamics and Attack Weight so a reaction cannot accidentally receive slash/attack twist.
-- Hit React and Knockback may use the existing Impact/Compression/Recovery solver through explicit hit impact markers.
-- Interact emits an `interact.commit` animation event at the reach/commit moment.
+`Back-foot load → Pelvis lead → Chest rotation → Shoulder → Elbow/Wrist → Ball Release → Follow-through → Recover`
 
-### Contact / Foot Plant behavior
+The throw profile exists in both Studio preview and standalone runtime export.
 
-- Dodge temporarily disables runtime Foot Plant so the evade is not cancelled by a planted-foot anchor.
-- Hit React and Interact can remain grounded and use Foot Plant.
-- Knockback, Death, Faint, and Get Up control their contact state explicitly and avoid locomotion gait overlays.
+### Added Pose Library states
 
-## V1.8.8 — Core Movement Animation Pack
+- Ball Ready
+- Ball Aim
+- Throw Wind-up
+- Throw Release
+- Throw Follow-through
+- Monster Command
 
-Movement library remains complete for the current core slice:
+### Added Animation Library templates
 
-- Walk / Run / Sprint / Start / Stop
-- Turn L/R
-- Strafe L/R
-- Jump / Fall / Land
-- Crouch Idle / Crouch Walk
+- Ball Aim Loop
+- Capture Throw R
+- Capture Throw L
+- Quick Throw R
+- Power Throw R
+- Summon Monster R
+- Monster Command
 
-## Preserved animation systems
+Capture throwing is intentionally emphasized with multiple signatures instead of one generic throw.
+
+### Throw timing signatures
+
+- Quick Throw — release around `0.34s`
+- Standard Capture Throw — release around `0.56s`
+- Power Throw — release around `0.68s`
+- Summon Throw — release around `0.55s`
+
+### Game event contract
+
+The throw clips emit gameplay events at authored release timing:
+
+- `ball.aim`
+- `ball.release`
+- `capture.throw`
+- `monster.summon`
+- `throw.follow_through`
+- `monster.command`
+
+`ball.release` uses `hand.R` or `hand.L` according to the throwing side so Pocket Monster runtime can spawn/release the ball on the exact animation frame.
+
+Summon Throw emits `monster.summon` on the same release frame so the monster system can synchronize VFX, ball trajectory and monster appearance.
+
+## Preserved core animation systems
 
 - V1.8.5.2 Twist Isolation and Animation Library restore
 - V1.8.5.3 Natural Walk pelvis lateral cap `±0.016m`
-- V1.8.6 distinct Walk / Run / Sprint / Start / Stop / Turn / Strafe dynamics
+- V1.8.6 Walk / Run / Sprint / Start / Stop / Turn / Strafe dynamics
 - V1.8.7 Foot Plant + Leg Response with bounded root correction
-- V1.8.8 Jump/Fall/Land/Crouch movement states
+- V1.8.8 Jump / Fall / Land / Crouch movement pack
+- V1.8.9 Dodge / Hit / Knockback / Get Up / Death / Faint / Interact pack
 - rigid `THREE.Group` rig architecture
 - 2K PBR quality gate
 
 ## Build chain
 
-`V1.8.4 → V1.8.4.1 → V1.8.5 → V1.8.5 guard → V1.8.5.1 → V1.8.5.2 → V1.8.5.3 → V1.8.6 → V1.8.7 → V1.8.8 → V1.8.9 → SHA-256 gate → Pages`
+`V1.8.4 → V1.8.4.1 → V1.8.5 → V1.8.5 guard → V1.8.5.1 → V1.8.5.2 → V1.8.5.3 → V1.8.6 → V1.8.7 → V1.8.8 → V1.8.9 → V1.8.10 → SHA-256 gate → Pages`
 
 ## Animation roadmap before weapons
 
-- **V1.8.8** — Core Movement Animation Pack
-- **V1.8.9** — Core Action / Reaction Pack
-- **V1.8.10** — Core Animation QA / transitions: Idle↔Walk↔Run, Jump→Fall→Land, Crouch enter/exit, Dodge recovery, reaction recovery, contact consistency and visual acceptance
+- **V1.8.10** — Monster Ball Action Pack: capture throw variants + summon + monster command
+- **V1.8.11** — Core Animation QA / Transitions: Idle↔Walk↔Run, Jump→Fall→Land, Crouch enter/exit, Dodge/Reaction recovery, Ball Aim→Throw→Recover, Summon→Command, contact consistency and visual acceptance
+- **V1.8.12** — Gameplay Animation Polish if visual acceptance finds missing main actions or timing problems
 
-Only after V1.8.10 is accepted should Weapon Attachment be reconsidered.
+Only after the main gameplay animation set is visually accepted should Weapon Attachment be reconsidered.
 
 ## Development rule
 

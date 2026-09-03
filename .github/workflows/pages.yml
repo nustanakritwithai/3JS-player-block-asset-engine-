@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.9 to Pages
+name: Deploy Character Studio V1.8.10 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.9 Pages artifact
+      - name: Build V1.8.10 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.9 core action/reaction and regression gates
+      - name: Verify V1.8.10 monster-ball action and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +46,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.9')
+              raise SystemExit('duplicate DOM ids in V1.8.10')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
@@ -60,47 +60,54 @@ jobs:
               'maxRootCorrection:.028',
               'Jump_Core',
               'Crouch_Walk_Core',
+              'createDodgeCoreTemplate(side="R")',
+              'Hit_React_Core',
+              'Knockback_Core',
+              'Interact_Core',
               'Weapon ยังไม่เริ่ม'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'id="btnTemplateDodgeR"',
-              'id="btnTemplateDodgeL"',
-              'id="btnTemplateHitReact"',
-              'id="btnTemplateKnockback"',
-              'id="btnTemplateGetUp"',
-              'id="btnTemplateDeath"',
-              'id="btnTemplateFaint"',
-              'id="btnTemplateInteract"',
-              'createDodgeCoreTemplate(side="R")',
-              '$("#btnTemplateDodgeR").onclick=()=>createDodgeCoreTemplate("R")',
-              '$("#btnTemplateDodgeL").onclick=()=>createDodgeCoreTemplate("L")',
-              'Hit_React_Core',
-              'Knockback_Core',
-              'Get_Up_Core',
-              'Death_Core',
-              'Faint_Core',
-              'Interact_Core',
-              'actionType:"dodge"',
-              'clip.runtime.motionClass="custom";clip.runtime.state=state',
-              'clip.locomotionDynamics.enabled=false;clip.bodyDynamics.enabled=false;clip.attackProfile.enabled=false',
-              'core-action-reaction-pack',
-              'interact.commit',
-              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:.72',
-              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:1.08'
+              'id="btnTemplateBallAim"',
+              'id="btnTemplateCaptureThrowR"',
+              'id="btnTemplateCaptureThrowL"',
+              'id="btnTemplateQuickThrowR"',
+              'id="btnTemplatePowerThrowR"',
+              'id="btnTemplateSummonThrowR"',
+              'id="btnTemplateMonsterCommand"',
+              '<option value="throw">Ball Throw</option>',
+              'label:"Ball Throw",shape:"attack"',
+              'throw:{shape:"attack"',
+              'actionType:"throw"',
+              'standard:{duration:.94,release:.56',
+              'quick:{duration:.68,release:.34',
+              'power:{duration:1.16,release:.68',
+              'summon:{duration:.98,release:.55',
+              'Capture_Throw',
+              'Quick_Capture_Throw',
+              'Power_Capture_Throw',
+              'Summon_Monster_Throw',
+              'name:"ball.release"',
+              'name:mode==="summon"?"monster.summon":"capture.throw"',
+              'socket:`hand.${side}`',
+              'monster-ball-action-pack',
+              'Monster_Command_Core',
+              'name:"monster.command"'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.9 action/reaction gate: '+token)
+                  raise SystemExit('missing V1.8.10 monster-ball gate: '+token)
+          if h.count('name:"ball.release"') != 1:
+              raise SystemExit('ball.release event contract duplicated or missing')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v189.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.9 core action/reaction regression gates passed')
+          Path('/tmp/studio-v1810.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10 monster-ball action/regression gates passed')
           PY
-          node --check /tmp/studio-v189.mjs
+          node --check /tmp/studio-v1810.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
