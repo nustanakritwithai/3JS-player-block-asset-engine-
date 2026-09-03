@@ -18,6 +18,7 @@ from patch_v1_8_4_1 import patch as patch_v1_8_4_1
 from patch_v1_8_5 import patch as patch_v1_8_5
 from patch_v1_8_5_guard import patch as patch_v1_8_5_guard
 from patch_v1_8_5_1 import patch as patch_v1_8_5_1
+from patch_v1_8_5_2 import patch as patch_v1_8_5_2
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -32,10 +33,14 @@ html = patch_v1_8_5_1(html)
 if 'Character Prototype Studio V1.8.5.1' not in html or 'Twist_Demo_V1_8_5_1' not in html:
     raise SystemExit('V1.8.5.1 deterministic twist visual recovery patch failed')
 
-expected = '82bf5b3f0b4cf154b7dfbf13dfe2b436cf9364ca6e2e3bdac53c3973b43abd5f'
+html = patch_v1_8_5_2(html)
+if 'Character Prototype Studio V1.8.5.2' not in html or 'Twist_Isolation_V1_8_5_2' not in html or 'ANIMATION LIBRARY' not in html:
+    raise SystemExit('V1.8.5.2 twist isolation/library restore patch failed')
+
+expected = '764939a9b69f31f59fc78ac6d22e887947443136953391f9ad7164ebf2abf8c8'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.5.1 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.5.2 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -45,5 +50,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.5.1 {len(html.encode("utf-8"))} bytes from V1.8.4 + V1.8.4.1 + V1.8.5 + V1.8.5.1 patches')
+print(f'Built V1.8.5.2 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.5.2 patch chain')
 print('sha256', actual)
