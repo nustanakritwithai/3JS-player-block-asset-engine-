@@ -108,7 +108,7 @@
   "$defs": {
     "assetDefinition": {
       "type": "object",
-      "required": ["id", "kind", "provider", "contract", "style", "surfaceStyle", "rig", "metrics", "roles"],
+      "required": ["id", "kind", "provider", "style", "surfaceStyle", "rig", "metrics", "roles"],
       "properties": {
         "id": { "type": "string", "pattern": "^character\\." },
         "name": { "type": "string" },
