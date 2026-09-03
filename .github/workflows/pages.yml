@@ -1,7 +1,9 @@
-name: Deploy Character Studio V1.8.9 to Pages
+name: Deploy Character Studio V1.8.10 to Pages
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -11,7 +13,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,10 +37,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.9 Pages artifact
+      - name: Build V1.8.10 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.9 core action/reaction and regression gates
+      - name: Verify V1.8.10 core animation QA transitions and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +48,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.9')
+              raise SystemExit('duplicate DOM ids in V1.8.10')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
@@ -60,20 +62,6 @@ jobs:
               'maxRootCorrection:.028',
               'Jump_Core',
               'Crouch_Walk_Core',
-              'Weapon ยังไม่เริ่ม'
-          ]
-          for token in preserved:
-              if token not in h:
-                  raise SystemExit('missing preserved regression token: '+token)
-          required=[
-              'id="btnTemplateDodgeR"',
-              'id="btnTemplateDodgeL"',
-              'id="btnTemplateHitReact"',
-              'id="btnTemplateKnockback"',
-              'id="btnTemplateGetUp"',
-              'id="btnTemplateDeath"',
-              'id="btnTemplateFaint"',
-              'id="btnTemplateInteract"',
               'Dodge_R_Core',
               'Dodge_L_Core',
               'Hit_React_Core',
@@ -82,34 +70,59 @@ jobs:
               'Death_Core',
               'Faint_Core',
               'Interact_Core',
-              'actionType:"dodge"',
-              'clip.runtime.motionClass="custom";clip.runtime.state=state',
-              'clip.locomotionDynamics.enabled=false;clip.bodyDynamics.enabled=false;clip.attackProfile.enabled=false',
               'core-action-reaction-pack',
               'interact.commit',
-              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:.72',
-              'impactMarkers=[{id:animationId(),time:.10,type:"hit",strength:1.08'
+              'Weapon ยังไม่เริ่ม'
+          ]
+          for token in preserved:
+              if token not in h:
+                  raise SystemExit('missing preserved regression token: '+token)
+          required=[
+              'CORE ANIMATION QA / TRANSITIONS',
+              'id="coreAnimationQaBox"',
+              'id="btnRunCoreAnimationQa"',
+              'id="btnStampCoreTransitions"',
+              'id="btnPreviewMovementChain"',
+              'id="btnPreviewAirChain"',
+              'id="btnPreviewRecoveryChain"',
+              'CORE_ANIMATION_TRANSITIONS_V1_8_10',
+              'CORE_ANIMATION_RECOVERY_V1_8_10',
+              'core-transition-v1',
+              'studioVersion:"1.8.10"',
+              'stampCoreTransitionContractV1810',
+              'runCoreAnimationQaV1810',
+              'previewCoreTransitionSequenceV1810',
+              'LOOP_SEAM',
+              'AIR_CONTACT',
+              'LAND_SUPPORT',
+              'RECOVERY_SUPPORT',
+              'TERMINAL_EXIT',
+              'addTemplateClipV1810Base',
+              'upgradeExistingCoreTransitionsV1810'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.9 action/reaction gate: '+token)
+                  raise SystemExit('missing V1.8.10 transition/QA gate: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v189.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.9 core action/reaction regression gates passed')
+          Path('/tmp/studio-v1810.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10 core animation QA/transition regression gates passed')
           PY
-          node --check /tmp/studio-v189.mjs
+          node --check /tmp/studio-v1810.mjs
 
       - name: Configure Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
