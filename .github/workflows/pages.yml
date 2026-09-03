@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.5.2 to Pages
+name: Deploy Character Studio V1.8.5.3 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.5.2 Pages artifact
+      - name: Build V1.8.5.3 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.5.2 UI and JavaScript regression gates
+      - name: Verify V1.8.5.3 locomotion and UI regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,21 +46,32 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.5.2')
+              raise SystemExit('duplicate DOM ids in V1.8.5.3')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library template controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
-              raise SystemExit('animation library is not restored to top of Anim tab')
+              raise SystemExit('animation library moved below Timeline')
           for token in ['Twist_Isolation_V1_8_5_2','transient-twist-isolation','purgeLegacyTwistDemoClips','updateTwistVisualDemo']:
               if token not in h:
-                  raise SystemExit('missing V1.8.5.2 isolation token: '+token)
+                  raise SystemExit('missing preserved V1.8.5.2 isolation token: '+token)
+          required=[
+              'pelvisShift:.014,pelvisBob:.040',
+              'walkVisualShiftCap:.016',
+              'migrateWalkPelvisTranslationHotfix',
+              'c.clip==="walk"?Math.min',
+              'clip.runtime?.motionClass==="walk"?Math.min(cfg.maxShift,cfg.walkVisualShiftCap):cfg.maxShift',
+              'COM correction remains fully computed for balance truth/QA'
+          ]
+          for token in required:
+              if token not in h:
+                  raise SystemExit('missing V1.8.5.3 walk pelvis gate: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v1852.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.5.2 DOM/library/isolation gates passed')
+          Path('/tmp/studio-v1853.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.5.3 walk pelvis/UI gates passed')
           PY
-          node --check /tmp/studio-v1852.mjs
+          node --check /tmp/studio-v1853.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
