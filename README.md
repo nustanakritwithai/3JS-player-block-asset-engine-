@@ -1,6 +1,6 @@
 # 3JS Player Block Asset Engine
 
-Current live checkpoint: **Character Prototype Studio V1.8.5.2 — Twist Isolation + Animation Library Restore**.
+Current live checkpoint: **Character Prototype Studio V1.8.5.3 — Walk Pelvis Translation Hotfix**.
 
 Live GitHub Pages:
 
@@ -10,29 +10,34 @@ https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
 CharacterSpec → Blocky/Big-Head Geometry → Rigid Pivot Rig → Pose/Animation → Foot Contact → Weight Transfer → COM/Pelvis → Upper Body Response → Impact/Recovery → Momentum → Equipment Mass → Attack Weight → High-Quality Skin/PBR → Natural Walk → Full-Body Twist Chain → Action-Specific Dynamics → Action Dynamics Inspector → Dynamics Auto-Tuner → Runtime Export.
 
+## V1.8.5.3 — Walk Pelvis Translation Hotfix
+
+V1.8.5.3 reduces excessive visible left/right hip sliding during Walk without weakening Weight Transfer or COM truth.
+
+The issue was two separate lateral motion paths: procedural Walk applied `pelvisShift` directly to `pelvis.position.x`, while authored Walk clips could receive additional pelvis translation from the Weight/Pelvis Solver. V1.8.1 reduced sway, but the visual mapping was still too large.
+
+Natural Walk now uses:
+
+- procedural pelvisShift: **0.028m → 0.014m**
+- authored/game-runtime Walk visual pelvis cap: **±0.016m**
+- post-smoothing Walk clamp so previous solver history cannot restore a larger offset
+- COM correction remains fully calculated for balance/QA
+- pelvis twist, hip drop and chest counter-rotation remain intact
+- Run is intentionally left unchanged for V1.8.6 Natural Locomotion Dynamics
+
+Preset lateral tuning:
+
+- Natural: `0.014m`, cap `0.016m`
+- Subtle: `0.010m`, cap `0.012m`
+- Stylized: `0.020m`, cap `0.024m`
+
+Existing saves using the exact V1.8.1 Natural default `0.028m` migrate to `0.014m`; custom values are preserved.
+
 ## V1.8.5.2 — Twist Isolation + Animation Library Restore
 
-This hotfix responds to the live report that the character still did not visibly twist and that the Animation Library appeared to be gone.
+Twist Demo is a transient isolation mode using neutral authored keyframes and Body Dynamics as the only action solver. It never enters `CharacterSpec.animations`, keeps the Animation Library clean, and preserves the visible Pelvis → Chest → Shoulder chain.
 
-The previous Twist Demo still used authored Attack keyframes that already contained pelvis/chest yaw. Runtime Body Dynamics was added on top, so authored yaw and runtime yaw could partially cancel on the same joints even though Inspector metrics showed large angles.
-
-V1.8.5.2 changes Twist Demo into a **transient isolation mode**:
-
-- neutral authored keyframes only
-- Body Dynamics is the only action solver applied during the demo
-- the demo is never added to `CharacterSpec.animations`
-- legacy generated Twist Demo clips are purged from saved animation lists
-- the demo loops until `Stop Twist Demo` is pressed
-- ISO / 3-quarter camera and neutral root yaw are used for readability
-- preflight requires an ordered visible Pelvis → Chest → Shoulder chain
-
-Locked isolation output is approximately:
-
-- Pelvis ~15.4° @ 1.34s
-- Chest ~30.1° @ 1.44s
-- Shoulder ~46.1° @ 1.50s
-
-The existing Walk / Run / Attack / Idle **Animation Library is restored to the top of the Anim tab** so it remains visible on mobile.
+The existing Walk / Run / Attack / Idle **Animation Library remains at the top of the Anim tab** for mobile visibility.
 
 ## V1.8.5 — Dynamics Auto-Tuner
 
@@ -44,7 +49,7 @@ The exact V1.8.4 HTML base remains stored losslessly in `deploy/source_v1_8_4/pa
 
 CI builds:
 
-`V1.8.4 source` → `patch_v1_8_4_1.py` → `patch_v1_8_5.py` → `patch_v1_8_5_guard.py` → `patch_v1_8_5_1.py` → `patch_v1_8_5_2.py` → SHA-256 verification → `_site/index.html`
+`V1.8.4 source` → `patch_v1_8_4_1.py` → `patch_v1_8_5.py` → `patch_v1_8_5_guard.py` → `patch_v1_8_5_1.py` → `patch_v1_8_5_2.py` → `patch_v1_8_5_3.py` → SHA-256 verification → `_site/index.html`
 
 High-quality starter PBR textures are generated natively at 2048×2048 and verified before deployment.
 
@@ -58,9 +63,10 @@ High-quality starter PBR textures are generated natively at 2048×2048 and verif
 - **V1.8.5** — Dynamics Auto-Tuner
 - **V1.8.5.1** — Twist Visual Recovery Hotfix
 - **V1.8.5.2** — Twist Isolation + Animation Library Restore
+- **V1.8.5.3** — Walk Pelvis Translation Hotfix
 
 ## Development rule
 
 Future development must **continue from the latest committed/checkpointed version instead of rebuilding the Studio from scratch**.
 
-V1.8.6 remains blocked until the live V1.8.5.2 viewport receives explicit visual acceptance.
+Next planned version after live Walk acceptance: **V1.8.6 — Natural Locomotion Dynamics**.
