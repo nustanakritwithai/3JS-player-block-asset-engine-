@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.5.1 to Pages
+name: Deploy Character Studio V1.8.5.2 to Pages
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.5.1 Pages artifact
+      - name: Build V1.8.5.2 Pages artifact
         run: python scripts/build_pages.py
 
       - name: Configure Pages
