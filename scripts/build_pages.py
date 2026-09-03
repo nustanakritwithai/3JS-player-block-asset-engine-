@@ -27,6 +27,7 @@ from patch_v1_8_9 import patch as patch_v1_8_9
 from patch_v1_8_10 import patch as patch_v1_8_10
 from patch_v1_9_0 import patch as patch_v1_9_0
 from patch_v1_9_0_runtime_graph import patch as patch_v1_9_0_runtime_graph
+from patch_v1_9_0_gameplay_guard import patch as patch_v1_9_0_gameplay_guard
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -89,6 +90,7 @@ v1810_actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 
 html = patch_v1_9_0(html)
 html = patch_v1_9_0_runtime_graph(html)
+html = patch_v1_9_0_gameplay_guard(html)
 required_v190 = [
     'Character Prototype Studio V1.9.0',
     'POCKET MONSTER RUNTIME EXPORT',
@@ -100,6 +102,7 @@ required_v190 = [
     'studio-character',
     'presentation-only',
     'POCKET_RUNTIME_FORBIDDEN_KEYS_V1_9_0',
+    '"capturechance","skill","collider","interactionradius","save","savepayload"',
     'sanitizePocketRuntimeValueV190',
     'validatePocketRuntimePackageV190',
     'buildPocketRuntimePackageV190',
@@ -110,8 +113,12 @@ required_v190 = [
     'throwOrigin:{joint:',
     'three-group-scenegraph-v1',
     'pocketRuntimeGeometrySnapshotV190',
+    'arrayType:attr.array?.constructor?.name||"Float32Array"',
+    'arrayType:geometry.index.array?.constructor?.name||"Uint16Array"',
     'pocketRuntimeMaterialSnapshotV190',
     'pocketRuntimeSceneGraphV190',
+    'pocketRuntimeJointBindingsV190',
+    'jointBindings:pocketRuntimeJointBindingsV190(characterRoot)',
     'sceneGraph:pocketRuntimeSceneGraphV190(characterRoot,stats)',
     '.pocket-character.json',
 ]
