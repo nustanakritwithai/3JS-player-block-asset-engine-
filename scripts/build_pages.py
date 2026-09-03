@@ -19,6 +19,7 @@ from patch_v1_8_5 import patch as patch_v1_8_5
 from patch_v1_8_5_guard import patch as patch_v1_8_5_guard
 from patch_v1_8_5_1 import patch as patch_v1_8_5_1
 from patch_v1_8_5_2 import patch as patch_v1_8_5_2
+from patch_v1_8_5_3 import patch as patch_v1_8_5_3
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -37,11 +38,15 @@ html = patch_v1_8_5_2(html)
 if 'Character Prototype Studio V1.8.5.2' not in html or 'Twist_Isolation_V1_8_5_2' not in html or 'ANIMATION LIBRARY' not in html:
     raise SystemExit('V1.8.5.2 twist isolation/library restore patch failed')
 
-# Canonical SHA is taken from the exact GitHub Actions reconstruction of this patch chain.
-expected = 'f1cbc07f8c13bb041a038ea104a157ad3a977bc1f5959d20688552a794a371bd'
+html = patch_v1_8_5_3(html)
+if 'Character Prototype Studio V1.8.5.3' not in html or 'walkVisualShiftCap' not in html:
+    raise SystemExit('V1.8.5.3 walk pelvis translation patch failed')
+
+# Derived from the exact deployed V1.8.5.2 Pages artifact plus the deterministic V1.8.5.3 patch.
+expected = 'c6775986c2d63b7dd7d2499a6e7089255b5ff61754bd85583119e52aec29eb14'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.5.2 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.5.3 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -51,5 +56,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.5.2 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.5.2 patch chain')
+print(f'Built V1.8.5.3 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.5.3 patch chain')
 print('sha256', actual)
