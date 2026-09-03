@@ -31,12 +31,12 @@ function pocketRuntimeMaterialSnapshotV190(material){
 function pocketRuntimeGeometrySnapshotV190(geometry){
   if(!geometry)return null;const attributes={};
   for(const [name,attr] of Object.entries(geometry.attributes||{})){
-    if(!attr?.array)continue;attributes[name]={itemSize:attr.itemSize,normalized:!!attr.normalized,count:attr.count,array:Array.from(attr.array)};
+    if(!attr?.array)continue;attributes[name]={itemSize:attr.itemSize,normalized:!!attr.normalized,count:attr.count,arrayType:attr.array?.constructor?.name||"Float32Array",array:Array.from(attr.array)};
   }
   return {
     type:geometry.type||"BufferGeometry",name:geometry.name||null,
     parameters:sanitizePocketRuntimeValueV190(geometry.parameters||{})||{},
-    attributes,index:geometry.index?.array?{itemSize:1,count:geometry.index.count,array:Array.from(geometry.index.array)}:null,
+    attributes,index:geometry.index?.array?{itemSize:1,count:geometry.index.count,arrayType:geometry.index.array?.constructor?.name||"Uint16Array",array:Array.from(geometry.index.array)}:null,
     groups:(geometry.groups||[]).map(g=>({start:g.start,count:g.count,materialIndex:g.materialIndex})),
     drawRange:geometry.drawRange?{start:geometry.drawRange.start,count:geometry.drawRange.count}:null
   };
