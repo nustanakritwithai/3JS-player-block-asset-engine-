@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.7 to Pages
+name: Deploy Character Studio V1.8.8 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.7 Pages artifact
+      - name: Build V1.8.8 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.7 foot plant / locomotion regression gates
+      - name: Verify V1.8.8 core movement and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +46,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.7')
+              raise SystemExit('duplicate DOM ids in V1.8.8')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
@@ -55,46 +55,46 @@ jobs:
               'Twist_Isolation_V1_8_5_2',
               'transient-twist-isolation',
               'walkVisualShiftCap:.016',
-              'COM correction remains fully computed for balance truth/QA',
               'LOCOMOTION_PROFILES',
-              'RUNTIME_LOCOMOTION_PROFILES',
               'run:{cadence:1.48',
               'sprint:{cadence:1.88',
-              'if(locomotionOwnsCoreYaw(clip))twist=0'
+              'FOOT PLANT + LEG RESPONSE',
+              'maxRootCorrection:.028',
+              'applyRuntimeFootPlantLegResponse'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'FOOT PLANT + LEG RESPONSE',
-              'id="footPlantLegResponseBox"',
-              'id="authoredFootPlantToggle"',
-              'plantStrength:.92',
-              'rootCompensation:.45',
-              'maxRootCorrection:.028',
-              'applyProceduralFootPlantLegResponse',
-              'applyAuthoredFootPlantLegResponse',
-              'applyRuntimeFootPlantLegResponse',
-              'rootMicroCompensateFromAnchors',
-              'if(recordSlide)motionState.maxSlide=Math.max',
-              'ankle.rotation.x=clamp(ankle.rotation.x,rad(-42),rad(42))',
-              'footPlantLegResponse:structuredClone(ensureFootPlantLegResponseSpec())',
-              'this.footPlant=applyRuntimeFootPlantLegResponse(this.root,this.joints,this.sockets,this.current,this.time,dt,this.footPlant,this.footPlantConfig)'
+              'id="btnTemplateTurnL"',
+              'id="btnTemplateStrafeL"',
+              'id="btnTemplateJump"',
+              'id="btnTemplateFall"',
+              'id="btnTemplateLand"',
+              'id="btnTemplateCrouch"',
+              'id="btnTemplateCrouchWalk"',
+              'jumpTakeoff:"Jump Takeoff"',
+              'Jump_Core',
+              'Fall_Loop_Core',
+              'Land_Core',
+              'Crouch_Idle_Core',
+              'Crouch_Walk_Core',
+              'createTurnLeftTemplate',
+              'createStrafeLeftTemplate',
+              'clip.footPlant.enabled=false;clip.source={kind:"core-movement-pack",studioVersion:"1.8.8"}'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.7 foot plant gate: '+token)
-          gain=.92*.45
-          max_corr=.028
-          if not (0 < gain < 1 and max_corr <= .03):
-              raise SystemExit('unsafe V1.8.7 root compensation defaults')
+                  raise SystemExit('missing V1.8.8 core movement gate: '+token)
+          if 'Weapon Attachment' in h and 'Weapon ยังไม่เริ่ม' not in h:
+              raise SystemExit('weapon roadmap leaked into V1.8.8 UI')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v187.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.7 foot plant/locomotion/UI gates passed')
+          Path('/tmp/studio-v188.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.8 core movement/regression gates passed')
           PY
-          node --check /tmp/studio-v187.mjs
+          node --check /tmp/studio-v188.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
