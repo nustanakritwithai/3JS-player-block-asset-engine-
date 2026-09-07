@@ -29,6 +29,7 @@ from patch_v1_8_10_1 import patch as patch_v1_8_10_1
 from patch_v1_8_10_2 import patch as patch_v1_8_10_2
 from patch_v1_8_10_3 import patch as patch_v1_8_10_3
 from patch_v1_8_10_4 import patch as patch_v1_8_10_4
+from patch_pocket_studio_live_bridge import patch as patch_pocket_studio_live_bridge
 
 html = patch_v1_8_4_1(html)
 html = patch_v1_8_5(html)
@@ -50,10 +51,25 @@ if 'Character Prototype Studio V1.8.10.4' not in html or 'throwStyle:"overhand-b
     raise SystemExit('V1.8.10.4 Baseball Throw Motion Hotfix patch failed')
 
 expected = 'fa11b83a76efad0ee8480ab1f02e4b8a2461939442795170d28d6595f18a7616'
-actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
-if actual != expected:
-    raise SystemExit(f'V1.8.10.4 source checksum mismatch: {actual}')
+base_actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
+if base_actual != expected:
+    raise SystemExit(f'V1.8.10.4 source checksum mismatch: {base_actual}')
 
+html = patch_pocket_studio_live_bridge(html)
+bridge_tokens = [
+    'POCKET_STUDIO_CHARACTER_REQUEST',
+    'POCKET_STUDIO_CHARACTER_PACKAGE',
+    'window.POCKET_STUDIO_CHARACTER_BRIDGE',
+    'pocket-character-runtime-v1',
+    'three-group-scenegraph-v1',
+    'provider:"studio-character"',
+    'gameplayPolicy:{included:false',
+]
+for token in bridge_tokens:
+    if token not in html:
+        raise SystemExit('Pocket Studio live bridge patch failed: ' + token)
+
+actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 site = root / '_site'
 if site.exists():
     shutil.rmtree(site)
@@ -62,5 +78,6 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.10.4 {len(html.encode("utf-8"))} bytes')
+print(f'Built V1.8.10.4 + Pocket Studio live bridge {len(html.encode("utf-8"))} bytes')
+print('base-v1.8.10.4-sha256', base_actual)
 print('sha256', actual)
