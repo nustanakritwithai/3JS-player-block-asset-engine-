@@ -1,6 +1,6 @@
 # 3JS Player Block Asset Engine
 
-Current checkpoint: **Character Prototype Studio V1.8.10.3 — clip Reference Hotfix**.
+Current checkpoint: **Character Prototype Studio V1.8.10.4 — Baseball Throw Motion Hotfix**.
 
 Live GitHub Pages:
 
@@ -8,40 +8,31 @@ https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
 ## Current priority
 
-Restore the main 3D character renderer before any V1.8.11 animation work.
+Make the capture-ball throw read visually as an **overhand baseball-style throw**, not a side-arm / frisbee throw, while preserving the renderer and all existing gameplay animation systems.
 
-## V1.8.10.3 — clip Reference Hotfix
+## V1.8.10.4 — Baseball Throw Motion Hotfix
 
-The live boot error was identified exactly as:
+The previous Monster Ball throw used too much horizontal sweep and side lean. V1.8.10.4 changes the throw signature to:
 
-`clip is not defined`
+`Back-foot load → arm cocked above/behind shoulder → front-foot step → elbow leads → overhand release → wrist snap → cross-body follow-through → recover`
 
-Root cause was in `renderContactAnalysis()`:
+### Throw changes
 
-- the function read `clip.footPlant` during `initUI()`
-- no local `clip` variable had been declared
-- both normal boot and recovery call `initUI()`, so both paths failed before `buildCharacter()` could finish
+- Attack-weight style changes from `horizontal` to `overhead` for capture/summon throw clips.
+- Throw Body Dynamics reduce lateral/side motion and increase forward drive.
+- Throwing arm now carries more of the motion while pelvis/chest rotation remains supporting rather than dominating.
+- Wind-up keeps the elbow high and bent behind the shoulder.
+- Release extends the arm above shoulder level instead of sweeping sideways.
+- Follow-through crosses the body like a baseball throw.
+- Clip metadata records `throwStyle = overhand-baseball`.
 
-V1.8.10.3 fixes the scope explicitly:
+Quick / Standard / Power / Summon retain their separate release timings from V1.8.10.
 
-- `const clip = selectedAnimationClip()`
-- `contactStateAtTime(clip, animationState.time)`
-- null-safe `clip?.footPlant?.enabled !== false`
+## Preserved fixes and systems
 
-CI now contains a dedicated regression gate that rejects the old free-variable expression.
-
-## V1.8.10.2 boot reliability remains preserved
-
-- Three.js core is the only mandatory 3D dependency
-- core sources: jsDelivr → esm.sh → unpkg
-- OrbitControls / TransformControls are optional and may fall back to no-op controls
-- saved-state recovery remains available
-
-## Preserved gameplay systems
-
-- Monster Ball Action Pack / `actionType = throw`
-- `ball.release`, `capture.throw`, `monster.summon`
-- Capture / Quick / Power / Summon throw timing signatures
+- V1.8.10.3 `clip is not defined` boot fix
+- V1.8.10.2 core-first Three.js boot and optional editor-control fallback
+- Monster Ball `ball.release`, `capture.throw`, `monster.summon`
 - Twist Isolation
 - Walk lateral cap `0.016m`
 - distinct Run/Sprint
@@ -53,9 +44,8 @@ CI now contains a dedicated regression gate that rejects the old free-variable e
 
 ## Roadmap
 
-- **V1.8.10.3** — undefined `clip` boot regression fix
-- **V1.8.11** — blocked until live visual acceptance confirms the main character is visible
-- then Core Animation QA / Transitions
+- **V1.8.10.4** — baseball-style capture/summon throw visual hotfix
+- **V1.8.11** — Core Animation QA / Transitions after live visual acceptance
 
 ## Development rule
 
