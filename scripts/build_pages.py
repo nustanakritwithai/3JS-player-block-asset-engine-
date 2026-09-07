@@ -25,6 +25,7 @@ from patch_v1_8_7 import patch as patch_v1_8_7
 from patch_v1_8_8 import patch as patch_v1_8_8
 from patch_v1_8_9 import patch as patch_v1_8_9
 from patch_v1_8_10 import patch as patch_v1_8_10
+from patch_v1_8_10_1 import patch as patch_v1_8_10_1
 
 html = patch_v1_8_4_1(html)
 if 'Character Prototype Studio V1.8.4.1' not in html:
@@ -67,10 +68,14 @@ html = patch_v1_8_10(html)
 if 'Character Prototype Studio V1.8.10' not in html or 'Ball Throw' not in html or 'ball.release' not in html or 'monster.summon' not in html:
     raise SystemExit('V1.8.10 Monster Ball Action Pack patch failed')
 
-expected = 'e7371b14c1fc227399e24fcfbfa86bc83426fe50507e87ff654fb2eee2d7521b'
+html = patch_v1_8_10_1(html)
+if 'Character Prototype Studio V1.8.10.1' not in html or 'THREE_RUNTIME_SOURCES' not in html or 'bootCharacterStudio' not in html:
+    raise SystemExit('V1.8.10.1 Character Boot Recovery patch failed')
+
+expected = '93a4cd90def20a03eaaece8a8656f8675f3ce7b51b7a9729d380eec86c7cab22'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.10 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.10.1 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -80,5 +85,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.10 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.10 patch chain')
+print(f'Built V1.8.10.1 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.10.1 patch chain')
 print('sha256', actual)
