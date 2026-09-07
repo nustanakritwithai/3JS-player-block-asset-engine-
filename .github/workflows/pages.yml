@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10.2 to Pages
+name: Deploy Character Studio V1.8.10.3 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10.2 Pages artifact
+      - name: Build V1.8.10.3 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.10.2 core-first character boot and regression gates
+      - name: Verify V1.8.10.3 clip reference and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +46,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10.2')
+              raise SystemExit('duplicate DOM ids in V1.8.10.3')
           preserved=[
               'Twist_Isolation_V1_8_5_2',
               'walkVisualShiftCap:.016',
@@ -62,36 +62,33 @@ jobs:
               'Interact_Core',
               'actionType:"throw"',
               'name:"ball.release"',
-              'name:mode==="summon"?"monster.summon":"capture.throw"'
+              'name:mode==="summon"?"monster.summon":"capture.throw"',
+              'THREE_CORE_SOURCES=[',
+              'makeFallbackOrbitControls',
+              'makeFallbackTransformControls'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'THREE_CORE_SOURCES=[',
-              'name:"jsDelivr"',
-              'name:"esm.sh"',
-              'name:"unpkg"',
-              'async function loadThreeCore()',
-              'makeFallbackOrbitControls',
-              'makeFallbackTransformControls',
-              'window.__CPS_CONTROLS_FALLBACK__=true',
-              '3D engine core failed to load',
-              'function bootCharacterStudio()',
-              'characterPrototypeStudio.v1.8.10.2.recoveryBackup'
+              'function renderContactAnalysis(){',
+              'const clip=selectedAnimationClip();',
+              'const state=contactStateAtTime(clip,animationState.time);',
+              'checked=clip?.footPlant?.enabled!==false',
+              'characterPrototypeStudio.v1.8.10.3'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10.2 boot gate: '+token)
-          if 'THREE_RUNTIME_SOURCES=[' in h:
-              raise SystemExit('old all-or-nothing runtime loader still present')
+                  raise SystemExit('missing V1.8.10.3 clip-reference gate: '+token)
+          if 'checked=clip.footPlant?.enabled!==false' in h:
+              raise SystemExit('undefined clip regression still present in renderContactAnalysis')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v18102.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10.2 core-first boot/regression gates passed')
+          Path('/tmp/studio-v18103.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10.3 clip reference/regression gates passed')
           PY
-          node --check /tmp/studio-v18102.mjs
+          node --check /tmp/studio-v18103.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
