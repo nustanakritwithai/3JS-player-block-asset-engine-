@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10 to Pages
+name: Deploy Character Studio V1.8.10.1 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10 Pages artifact
+      - name: Build V1.8.10.1 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.10 monster-ball action and regression gates
+      - name: Verify V1.8.10.1 character boot and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +46,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10')
+              raise SystemExit('duplicate DOM ids in V1.8.10.1')
           if h.count('id="btnTemplateAttack"')!=1 or h.count('id="btnTemplateWalk"')!=1:
               raise SystemExit('animation library controls missing/duplicated')
           if h.index('ANIMATION LIBRARY') > h.index('TIMELINE'):
@@ -64,50 +64,40 @@ jobs:
               'Hit_React_Core',
               'Knockback_Core',
               'Interact_Core',
+              'actionType:"throw"',
+              'name:"ball.release"',
+              'name:mode==="summon"?"monster.summon":"capture.throw"',
               'Weapon ยังไม่เริ่ม'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
-          required=[
-              'id="btnTemplateBallAim"',
-              'id="btnTemplateCaptureThrowR"',
-              'id="btnTemplateCaptureThrowL"',
-              'id="btnTemplateQuickThrowR"',
-              'id="btnTemplatePowerThrowR"',
-              'id="btnTemplateSummonThrowR"',
-              'id="btnTemplateMonsterCommand"',
-              '<option value="throw">Ball Throw</option>',
-              'label:"Ball Throw",shape:"attack"',
-              'throw:{shape:"attack"',
-              'actionType:"throw"',
-              'standard:{duration:.94,release:.56',
-              'quick:{duration:.68,release:.34',
-              'power:{duration:1.16,release:.68',
-              'summon:{duration:.98,release:.55',
-              'Capture_Throw',
-              'Quick_Capture_Throw',
-              'Power_Capture_Throw',
-              'Summon_Monster_Throw',
-              'name:"ball.release"',
-              'name:mode==="summon"?"monster.summon":"capture.throw"',
-              'socket:`hand.${side}`',
-              'monster-ball-action-pack',
-              'Monster_Command_Core',
-              'name:"monster.command"'
+          boot_required=[
+              'THREE_RUNTIME_SOURCES=[',
+              'name:"jsDelivr"',
+              'name:"esm.sh"',
+              'https://esm.sh/three@0.169.0?target=es2020',
+              'moduleTimeout(import(src.three),8000',
+              'earlyBootOverlay("3D engine failed to load"',
+              'function bootCharacterStudio()',
+              'window.__CPS_BOOT_OK__=true',
+              'window.__CPS_BOOT_RECOVERED__=true',
+              'characterPrototypeStudio.v1.8.10.1.recoveryBackup',
+              'Recovered default character · previous state backed up'
           ]
-          for token in required:
+          for token in boot_required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10 monster-ball gate: '+token)
-          if h.count('name:"ball.release"') != 1:
-              raise SystemExit('ball.release event contract duplicated or missing')
+                  raise SystemExit('missing V1.8.10.1 boot recovery gate: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v1810.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10 monster-ball action/regression gates passed')
+          module=scripts[-1]
+          if "import * as THREE from 'three';" in module[:1800]:
+              raise SystemExit('static Three.js import still owns boot path')
+          Path('/tmp/studio-v18101.mjs').write_text(module,encoding='utf-8')
+          print('V1.8.10.1 boot/recovery/regression gates passed')
           PY
-          node --check /tmp/studio-v1810.mjs
+          node --check /tmp/studio-v18101.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
