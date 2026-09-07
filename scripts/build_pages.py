@@ -26,56 +26,29 @@ from patch_v1_8_8 import patch as patch_v1_8_8
 from patch_v1_8_9 import patch as patch_v1_8_9
 from patch_v1_8_10 import patch as patch_v1_8_10
 from patch_v1_8_10_1 import patch as patch_v1_8_10_1
+from patch_v1_8_10_2 import patch as patch_v1_8_10_2
 
 html = patch_v1_8_4_1(html)
-if 'Character Prototype Studio V1.8.4.1' not in html:
-    raise SystemExit('V1.8.4.1 twist activation patch failed')
-
 html = patch_v1_8_5(html)
 html = patch_v1_8_5_guard(html)
-if 'Character Prototype Studio V1.8.5' not in html or 'DYNAMICS AUTO-TUNER' not in html:
-    raise SystemExit('V1.8.5 Dynamics Auto-Tuner patch failed')
-
 html = patch_v1_8_5_1(html)
-if 'Character Prototype Studio V1.8.5.1' not in html or 'Twist_Demo_V1_8_5_1' not in html:
-    raise SystemExit('V1.8.5.1 deterministic twist visual recovery patch failed')
-
 html = patch_v1_8_5_2(html)
-if 'Character Prototype Studio V1.8.5.2' not in html or 'Twist_Isolation_V1_8_5_2' not in html or 'ANIMATION LIBRARY' not in html:
-    raise SystemExit('V1.8.5.2 twist isolation/library restore patch failed')
-
 html = patch_v1_8_5_3(html)
-if 'Character Prototype Studio V1.8.5.3' not in html or 'walkVisualShiftCap' not in html:
-    raise SystemExit('V1.8.5.3 walk pelvis translation patch failed')
-
 html = patch_v1_8_6(html)
-if 'Character Prototype Studio V1.8.6' not in html or 'LOCOMOTION_PROFILES' not in html or 'applyLocomotionDynamicsRuntime' not in html:
-    raise SystemExit('V1.8.6 Natural Locomotion Dynamics patch failed')
-
 html = patch_v1_8_7(html)
-if 'Character Prototype Studio V1.8.7' not in html or 'FOOT PLANT + LEG RESPONSE' not in html or 'applyRuntimeFootPlantLegResponse' not in html:
-    raise SystemExit('V1.8.7 Foot Plant + Leg Response patch failed')
-
 html = patch_v1_8_8(html)
-if 'Character Prototype Studio V1.8.8' not in html or 'Jump_Core' not in html or 'Crouch_Walk_Core' not in html:
-    raise SystemExit('V1.8.8 Core Movement Animation Pack patch failed')
-
 html = patch_v1_8_9(html)
-if 'Character Prototype Studio V1.8.9' not in html or 'createDodgeCoreTemplate' not in html or 'Interact_Core' not in html:
-    raise SystemExit('V1.8.9 Core Action / Reaction Pack patch failed')
-
 html = patch_v1_8_10(html)
-if 'Character Prototype Studio V1.8.10' not in html or 'Ball Throw' not in html or 'ball.release' not in html or 'monster.summon' not in html:
-    raise SystemExit('V1.8.10 Monster Ball Action Pack patch failed')
-
 html = patch_v1_8_10_1(html)
-if 'Character Prototype Studio V1.8.10.1' not in html or 'THREE_RUNTIME_SOURCES' not in html or 'bootCharacterStudio' not in html:
-    raise SystemExit('V1.8.10.1 Character Boot Recovery patch failed')
+html = patch_v1_8_10_2(html)
 
-expected = '93a4cd90def20a03eaaece8a8656f8675f3ce7b51b7a9729d380eec86c7cab22'
+if 'Character Prototype Studio V1.8.10.2' not in html or 'THREE_CORE_SOURCES' not in html or 'makeFallbackTransformControls' not in html:
+    raise SystemExit('V1.8.10.2 Core-First Character Boot patch failed')
+
+expected = 'e132948d6be3d8e839a99d2fd10ba988d015667029f1deab9116cb3ef64ce247'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.10.1 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.10.2 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -85,5 +58,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.10.1 {len(html.encode("utf-8"))} bytes from incremental V1.8.4 → V1.8.10.1 patch chain')
+print(f'Built V1.8.10.2 {len(html.encode("utf-8"))} bytes')
 print('sha256', actual)
