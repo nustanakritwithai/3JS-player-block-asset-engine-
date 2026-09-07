@@ -28,6 +28,7 @@ from patch_v1_8_10 import patch as patch_v1_8_10
 from patch_v1_8_10_1 import patch as patch_v1_8_10_1
 from patch_v1_8_10_2 import patch as patch_v1_8_10_2
 from patch_v1_8_10_3 import patch as patch_v1_8_10_3
+from patch_v1_8_10_4 import patch as patch_v1_8_10_4
 
 html = patch_v1_8_4_1(html)
 html = patch_v1_8_5(html)
@@ -43,14 +44,15 @@ html = patch_v1_8_10(html)
 html = patch_v1_8_10_1(html)
 html = patch_v1_8_10_2(html)
 html = patch_v1_8_10_3(html)
+html = patch_v1_8_10_4(html)
 
-if 'Character Prototype Studio V1.8.10.3' not in html or 'const clip=selectedAnimationClip();' not in html or 'checked=clip?.footPlant?.enabled!==false' not in html:
-    raise SystemExit('V1.8.10.3 clip Reference Hotfix patch failed')
+if 'Character Prototype Studio V1.8.10.4' not in html or 'throwStyle:"overhand-baseball"' not in html or 'style:"overhead"' not in html:
+    raise SystemExit('V1.8.10.4 Baseball Throw Motion Hotfix patch failed')
 
-expected = '64fa2e99535fc79c93369ccf7da0501103d801477fb4f82b3b97c064d690dcf9'
+expected = 'fa11b83a76efad0ee8480ab1f02e4b8a2461939442795170d28d6595f18a7616'
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
 if actual != expected:
-    raise SystemExit(f'V1.8.10.3 source checksum mismatch: {actual}')
+    raise SystemExit(f'V1.8.10.4 source checksum mismatch: {actual}')
 
 site = root / '_site'
 if site.exists():
@@ -60,5 +62,5 @@ site.mkdir(parents=True)
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
 (site / '.nojekyll').write_text('', encoding='utf-8')
-print(f'Built V1.8.10.3 {len(html.encode("utf-8"))} bytes')
+print(f'Built V1.8.10.4 {len(html.encode("utf-8"))} bytes')
 print('sha256', actual)
