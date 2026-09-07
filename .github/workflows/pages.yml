@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10.3 to Pages
+name: Deploy Character Studio V1.8.10.4 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10.3 Pages artifact
+      - name: Build V1.8.10.4 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.10.3 clip reference and regression gates
+      - name: Verify V1.8.10.4 baseball throw and regression gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,7 +46,7 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10.3')
+              raise SystemExit('duplicate DOM ids in V1.8.10.4')
           preserved=[
               'Twist_Isolation_V1_8_5_2',
               'walkVisualShiftCap:.016',
@@ -65,30 +65,36 @@ jobs:
               'name:mode==="summon"?"monster.summon":"capture.throw"',
               'THREE_CORE_SOURCES=[',
               'makeFallbackOrbitControls',
-              'makeFallbackTransformControls'
+              'makeFallbackTransformControls',
+              'const clip=selectedAnimationClip();',
+              'checked=clip?.footPlant?.enabled!==false'
           ]
           for token in preserved:
               if token not in h:
                   raise SystemExit('missing preserved regression token: '+token)
           required=[
-              'function renderContactAnalysis(){',
-              'const clip=selectedAnimationClip();',
-              'const state=contactStateAtTime(clip,animationState.time);',
-              'checked=clip?.footPlant?.enabled!==false',
-              'characterPrototypeStudio.v1.8.10.3'
+              'throwStyle:"overhand-baseball"',
+              'style:"overhead"',
+              'shoulderDriveDeg:30,wristFollowDeg:18',
+              'r(arm,-118,0,left?-4:4)',
+              'r(elbow,-126,0,left?-8:8)',
+              'forwardDrive:.072,lateralDrive:.002',
+              'sideLeanMul:.28',
+              'armMul:1.66',
+              'characterPrototypeStudio.v1.8.10.4'
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10.3 clip-reference gate: '+token)
-          if 'checked=clip.footPlant?.enabled!==false' in h:
-              raise SystemExit('undefined clip regression still present in renderContactAnalysis')
+                  raise SystemExit('missing V1.8.10.4 baseball throw gate: '+token)
+          if 'enabled:true,side,style:"horizontal",anticipationEnd:Math.max(.06,settings.windup*.36)' in h:
+              raise SystemExit('frisbee-style horizontal throw profile still present')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v18103.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10.3 clip reference/regression gates passed')
+          Path('/tmp/studio-v18104.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10.4 baseball throw/regression gates passed')
           PY
-          node --check /tmp/studio-v18103.mjs
+          node --check /tmp/studio-v18104.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
