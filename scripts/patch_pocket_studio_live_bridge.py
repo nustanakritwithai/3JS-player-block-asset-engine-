@@ -50,7 +50,7 @@ function pocketStudioMaterial(material){
   return {type:material.type||"Material",name:material.name||null,color:color(material.color),emissive:color(material.emissive),emissiveIntensity:Number(material.emissiveIntensity)||0,
     roughness:Number.isFinite(material.roughness)?material.roughness:null,metalness:Number.isFinite(material.metalness)?material.metalness:null,
     opacity:Number.isFinite(material.opacity)?material.opacity:1,transparent:!!material.transparent,alphaTest:Number(material.alphaTest)||0,side:material.side??null,
-    vertexColors:!!material.vertexColors,flatShading:!!material.flatShading,
+    vertexColors:!!material.vertexColors,flatShading:!!material.flatShading,normalScale:material.normalScale?[material.normalScale.x,material.normalScale.y]:null,
     maps:{map:pocketStudioTextureRef(material.map),normalMap:pocketStudioTextureRef(material.normalMap),roughnessMap:pocketStudioTextureRef(material.roughnessMap),metalnessMap:pocketStudioTextureRef(material.metalnessMap),emissiveMap:pocketStudioTextureRef(material.emissiveMap),aoMap:pocketStudioTextureRef(material.aoMap),alphaMap:pocketStudioTextureRef(material.alphaMap)}};
 }
 function pocketStudioGeometry(geometry){
@@ -83,14 +83,16 @@ function pocketStudioRenderProfile(sceneGraph){
     if(!ref||typeof ref!=="object"||Array.isArray(ref))return null;
     const source=pocketStudioSafeTextureSource(ref.source);
     if(!source){if(ref?.source)rejectedSources.push({source:String(ref.source),slot,reason:"requires same-origin HTTPS Studio asset"});return null}
-    if(!textureBySource.has(source)){
-      const id=pocketStudioStableId("studio-texture",source);textureBySource.set(source,id);
-      textures.push({id,source,colorSpace:ref.colorSpace??null,flipY:ref.flipY??null,wrapS:ref.wrapS??null,wrapT:ref.wrapT??null,
+    const colorSpace=slot==="map"||slot==="emissiveMap"?(ref.colorSpace||"srgb"):"";
+    const key=JSON.stringify([source,colorSpace,ref.flipY??true,ref.wrapS,ref.wrapT,ref.minFilter,ref.magFilter,ref.generateMipmaps,ref.anisotropy,ref.repeat,ref.offset,ref.center,ref.rotation,ref.integrity]);
+    if(!textureBySource.has(key)){
+      const id=pocketStudioStableId("studio-texture",key);textureBySource.set(key,id);
+      textures.push({id,source,colorSpace,flipY:ref.flipY??true,wrapS:ref.wrapS??null,wrapT:ref.wrapT??null,
         minFilter:ref.minFilter??null,magFilter:ref.magFilter??null,generateMipmaps:ref.generateMipmaps??null,anisotropy:ref.anisotropy??null,
         repeat:ref.repeat||[1,1],offset:ref.offset||[0,0],center:ref.center||[0,0],rotation:ref.rotation||0,
         integrity:ref.integrity||null,integrityStatus:ref.integrityStatus||"unavailable-in-sync-export"});
     }
-    return textureBySource.get(source);
+    return textureBySource.get(key);
   };
   const visit=(node,path=[])=>{
     if(node?.nodeType==="mesh"){
@@ -122,14 +124,13 @@ function pocketStudioSockets(){return {
   rightHand:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,0]},leftHand:{joint:pocketStudioJoint(["handL","wristL","elbowL"]),offset:[0,0,0]},
   head:{joint:pocketStudioJoint(["head","neck"]),offset:[0,0,0]},back:{joint:pocketStudioJoint(["chest","spine","pelvis"]),offset:[0,0,.12]},waist:{joint:pocketStudioJoint(["pelvis","chest"]),offset:[0,0,0]},
   vfxOrigin:{joint:pocketStudioJoint(["chest","pelvis"]),offset:[0,.12,-.18]},attackOrigin:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,-.08]},throwOrigin:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,-.08]}}}
-function pocketStudioJoint(candidates){for(const name of candidates)if(joints?.[name])return name;return candidates[0]}
 function pocketStudioState(clip){return String(clip?.runtime?.transition?.state||clip?.runtime?.state||clip?.name||"idle").trim().replace(/[\s-]+/g,"_").toLowerCase()}
 const POCKET_STUDIO_MOTION_PACK_SCHEMA="pocket-character-motion-pack-v1";
 const POCKET_STUDIO_MOTION_PACK_VERSION="1.1.0";
 function pocketStudioReadyMotionPack(){
   const clip=(name,state,duration,loop,keys,options={})=>{
     const out=createTemplateClip(name,duration,30,keys,loop,"smooth");
-    out.runtime.state=state;out.runtime.motionClass=options.motionClass||out.runtime.motionClass;
+    out.id=`pocket-template-${state}`;out.runtime.state=state;out.runtime.motionClass=options.motionClass||out.runtime.motionClass;
     out.runtime.motionSpeed=Number.isFinite(options.motionSpeed)?options.motionSpeed:out.runtime.motionSpeed;
     out.source={kind:"pocketmonster-default-motion-pack",studioVersion:"1.8.10.4",template:name};
     if(Array.isArray(options.events))out.events=options.events.map(event=>({...event}));
@@ -140,7 +141,7 @@ function pocketStudioReadyMotionPack(){
   if(idleB.chest){idleB.chest.rotation[0]=(idleB.chest.rotation[0]||0)+rad(2);idleB.chest.position[1]=(idleB.chest.position[1]||0)+.015}
   if(idleB.head)idleB.head.rotation[0]=(idleB.head.rotation[0]||0)-rad(1);
   const idle=makeAnimationClip("Idle_Breathing",2,30);
-  idle.loop=true;idle.interpolation="smooth";idle.runtime.state="idle";idle.runtime.motionClass="idle";idle.runtime.motionSpeed=0;
+  idle.id="pocket-template-idle";idle.loop=true;idle.interpolation="smooth";idle.runtime.state="idle";idle.runtime.motionClass="idle";idle.runtime.motionSpeed=0;
   idle.keyframes=[
     {time:0,joints:idleA,meta:{contact:{L:true,R:true},weight:"both",weightValue:{L:.5,R:.5}}},
     {time:1,joints:idleB,meta:{contact:{L:true,R:true},weight:"both",weightValue:{L:.5,R:.5}}},
@@ -167,7 +168,7 @@ function pocketStudioReadyMotionPack(){
     clip("Dodge_L_Core","dodge_l",.72,false,[k(0,"idle","L"),k(.12,"crouchStep","R"),k(.34,"dodge","L"),k(.52,"crouchStep","L"),k(.72,"idle","L")],{motionClass:"action",motionSpeed:0}),
     clip("Hit_React_Core","hurt",.56,false,[k(0,"idle"),k(.10,"hitReact","R"),k(.27,"hitReact","L"),k(.56,"idle")],{motionClass:"custom",motionSpeed:0}),
     clip("Knockback_Core","knockback",.82,false,[k(0,"idle"),k(.10,"hitReact","R"),k(.30,"knockback","R"),k(.58,"crouch","R"),k(.82,"idle")],{motionClass:"custom",motionSpeed:0}),
-    clip("Get_Up_Core","get_up",1.2,false,[k(0,"downBack","R"),k(.36,"faint","R"),k(.72,"crouch","R"),k(1,"jumpTakeoff","R"),k(1.2,"idle","R")],{motionClass:"custom",motionSpeed:0}),
+    clip("Get_Up_Core","get_up",1.2,false,[k(0,"downBack","R"),k(.36,"faint","R"),k(.72,"crouch","R"),k(1,"jumpTakeoff","R"),k(1.2,"idle")],{motionClass:"custom",motionSpeed:0}),
     clip("Death_Core","dead",1.05,false,[k(0,"idle"),k(.18,"hitReact","R"),k(.48,"knockback","R"),k(.80,"downBack","R"),k(1.05,"downBack","R")],{motionClass:"custom",motionSpeed:0}),
     clip("Faint_Core","faint",.92,false,[k(0,"idle"),k(.20,"crouch","R"),k(.54,"faint","R"),k(.92,"faint","R")],{motionClass:"custom",motionSpeed:0}),
     clip("Interact_Core","interact",.86,false,[k(0,"idle","R"),k(.18,"interactReach","R"),k(.46,"interactReach","R"),k(.68,"idle","R"),k(.86,"idle","R")],{motionClass:"custom",motionSpeed:0}),
@@ -215,6 +216,12 @@ function buildPocketStudioCharacterPackage(request={}){
   const name=String(request.displayName||"Studio Player").trim().slice(0,80)||"Studio Player";const clean=pocketStudioSanitize(spec)||{};const authored=Array.isArray(clean.animations)?clean.animations:[];delete clean.animations;
   const motionPack=pocketStudioReadyMotionPack();pocketStudioAssertMotionPack(motionPack);
   const authoredStates=new Set(authored.map(pocketStudioState));const animations=[...motionPack.clips.filter(clip=>!authoredStates.has(pocketStudioState(clip))),...authored];
+  const actionMap={...motionPack.actionMap},unsupportedActions={...motionPack.unsupportedActions};
+  for(const action of Object.keys(unsupportedActions)){
+    const state=action.replace(/-/g,"_");
+    if(authoredStates.has(state)){actionMap[action]=state;delete unsupportedActions[action]}
+  }
+  pocketStudioAssertMotionPack({...motionPack,clips:animations,actionMap,unsupportedActions});
   const heightCandidates=[spec?.body?.height,spec?.character?.height,spec?.metrics?.height];let height=1.8;for(const value of heightCandidates){const n=Number(value);if(Number.isFinite(n)&&n>.2&&n<10){height=n;break}}
   const common={id,kind:"character",provider:"studio-character",style:"blocky-bighead-studio-v1",surfaceStyle:"pbr-studio-v1",rig:"studio-three-group-v1",metrics:{height},roles:{player:{}}};
   const sceneGraph=pocketStudioSceneGraph(characterRoot);const renderProfile=pocketStudioRenderProfile(sceneGraph);
@@ -222,7 +229,7 @@ function buildPocketStudioCharacterPackage(request={}){
     target:{game:"PocketMonster",assetEngine:"asset-presentation",provider:"studio-character",assetHandleContract:["root","rig","play","update","anchor","bounds","setAppearance","dispose"]},
     manifest:{...common,name,contract:"presentation-only"},catalogEntry:{...common},character:clean,sceneGraph,renderProfile,
     rig:{architecture:"THREE.Group",schema:"studio-rig-v1",root:"characterRoot",jointNames:Object.keys(joints||{}),jointBindings:pocketStudioJointBindings(characterRoot),sockets:pocketStudioSockets()},
-    motionPack:{schema:motionPack.schema,version:motionPack.version,source:motionPack.source,requiredActions:motionPack.requiredActions,actionMap:motionPack.actionMap,unsupportedActions:motionPack.unsupportedActions},
+    motionPack:{schema:motionPack.schema,version:motionPack.version,source:motionPack.source,requiredActions:motionPack.requiredActions,actionMap,unsupportedActions},
     animations,animationIndex:animations.map(clip=>({id:clip.id||null,name:clip.name||"Animation",state:pocketStudioState(clip),duration:Number(clip.duration)||0,loop:!!clip.loop,keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0,events:Array.isArray(clip.events)?clip.events.map(event=>({...event})):[]})),
     gameplayPolicy:{included:false,authority:"Pocket Monster / Pirate Fruit server-domain systems",forbiddenKeys:[...POCKET_STUDIO_FORBIDDEN_KEYS].sort()},transport:{format:"postmessage-json-envelope",encoding:"structured-clone"}};
 }
