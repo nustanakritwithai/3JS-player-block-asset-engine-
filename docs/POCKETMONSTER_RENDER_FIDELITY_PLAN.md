@@ -1,7 +1,10 @@
 # PocketMonster Studio Render Fidelity Plan
 
-Status: proposed only. This document deliberately does not add a renderer, change
-gameplay authority, or enable a new sandbox capability.
+Status: Studio transport metadata is emitted in the `pocket-character-runtime-v1`
+1.1 export. PocketMonster does not yet consume it, so it is not a claim that
+textures or Studio lighting are visible in the game. This document deliberately
+does not add a renderer, change gameplay authority, or enable a new sandbox
+capability.
 
 ## Current boundary
 
@@ -15,8 +18,8 @@ renderer and its lights.
 
 ## Proposed `pocket-character-render-profile-v1`
 
-Add the following *presentation-only* field to a Studio package after the
-motion export is accepted in PocketMonster:
+Studio now sends the following *presentation-only* field; PocketMonster must
+implement the bounded host consumer below before it becomes a render feature:
 
 ```json
 {
@@ -27,7 +30,7 @@ motion export is accepted in PocketMonster:
       {
         "id": "skin-albedo",
         "url": "https://.../skin-albedo.png",
-        "sha256": "...",
+        "sha256": null,
         "role": "map",
         "colorSpace": "srgb",
         "flipY": false,
@@ -53,10 +56,13 @@ motion export is accepted in PocketMonster:
 }
 ```
 
-`url` is allowlisted to the Studio/CDN origins configured by PocketMonster; the
-Pocket host verifies the optional SHA-256 before use. The package does not send
-image bytes, executable code, light objects, gameplay data, or renderer
-commands.
+Studio exports only same-origin HTTPS texture URLs and includes texture sampling
+metadata (`colorSpace`, `flipY`, wrap, filters, mipmaps, anisotropy, and UV
+transform). It emits a SHA-256 only when an upstream texture supplies one; the
+browser's synchronous Three.js export path cannot truthfully calculate bytes it
+cannot read. The Pocket host must therefore obtain and verify an integrity value
+before binding a texture. The package does not send image bytes, executable
+code, light objects, gameplay data, or renderer commands.
 
 ## Bounded host implementation
 
