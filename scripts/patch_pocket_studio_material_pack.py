@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Export selected Studio materials deterministically on cold and warm loads."""
 from pathlib import Path
 
 
@@ -6,43 +7,49 @@ def patch(html):
     anchor = 'function createAttackTemplate(){'
     if anchor not in html:
         raise RuntimeError('missing anchor: Pocket Studio material pack')
-    extension = r'''
-/* Deterministic host-applied 2K PBR fallback for the default Studio material roles.
- * It does not mutate the Studio editor materials or create renderer/lights. */
+    extension = r'''// Only exported snapshots are changed; editor materials and user choices are untouched.
 const pocketStudioBaseRenderProfile=pocketStudioRenderProfile;
-const POCKET_STUDIO_GENERATED_MATERIAL_PACK=Object.freeze({
-  skin:Object.freeze({map:"skin_warm_basecolor.webp",normalMap:"skin_warm_normal.png",roughnessMap:"skin_warm_roughness.webp",aoMap:"skin_warm_ao.webp"}),
-  hair:Object.freeze({map:"hair_dark_basecolor.webp",normalMap:"hair_dark_normal.png",roughnessMap:"hair_dark_roughness.webp",aoMap:"hair_dark_ao.webp"}),
-  shirt:Object.freeze({map:"cloth_navy_basecolor.webp",normalMap:"cloth_weave_normal.png",roughnessMap:"cloth_roughness.webp",aoMap:"cloth_ao.webp"}),
-  pants:Object.freeze({map:"cloth_navy_basecolor.webp",normalMap:"cloth_weave_normal.png",roughnessMap:"cloth_roughness.webp",aoMap:"cloth_ao.webp"}),
-  accent:Object.freeze({map:"gold_basecolor.webp",normalMap:"gold_normal.png",roughnessMap:"gold_roughness.webp",metalnessMap:"gold_metalness.webp",aoMap:"gold_ao.webp"}),
-  boots:Object.freeze({map:"leather_brown_basecolor.webp",normalMap:"leather_brown_normal.png",roughnessMap:"leather_brown_roughness.webp",aoMap:"leather_brown_ao.webp"}),
-  eyes:Object.freeze({map:"emissive_cyan_basecolor.webp",emissiveMap:"emissive_cyan_emissive.webp",roughnessMap:"emissive_cyan_roughness.webp"})
-});
-function pocketStudioGeneratedTextureMeta(file,slot){
-  const source=new URL(`assets/textures/${file}`,location.href).href;
-  const integrity=POCKET_STUDIO_TEXTURE_INTEGRITY[`assets/textures/${file}`]||null;
-  const colorData=slot==="map"||slot==="emissiveMap"?"color":"data";
-  return {source,integrity,colorData,colorSpace:colorData==="color"?"srgb":null,flipY:false,wrapS:null,wrapT:null,minFilter:null,magFilter:null,generateMipmaps:true,anisotropy:4,repeat:[1,1],offset:[0,0],center:[0,0],rotation:0};
+const POCKET_STUDIO_MAP_TYPES=Object.freeze({baseColor:"map",normal:"normalMap",roughness:"roughnessMap",metalness:"metalnessMap",ao:"aoMap",emissive:"emissiveMap"});
+function pocketStudioDeclaredTexture(slotName,type){
+  const sys=spec?.skinSystem,slot=sys?.slots?.[slotName];
+  if(!sys?.enabled||!slot||typeof textureSourceFor!=="function")return undefined;
+  const source=textureSourceFor(slotName,type);
+  if(!source)return null;
+  // Blob/data/custom URLs are NOT replaced by starter images. The base exporter
+  // records its same-origin rejection; scalar PBR stays available to the game.
+  let integrity=null;
+  try{const url=new URL(source,location.href),marker="/assets/",at=url.pathname.indexOf(marker);
+    if(url.origin===location.origin&&at>=0)integrity=POCKET_STUDIO_TEXTURE_INTEGRITY[`assets/${url.pathname.slice(at+marker.length)}`]||null;
+  }catch{}
+  const color=type==="baseColor"||type==="emissive";
+  return {source,colorSpace:color?"srgb":"",integrity,integrityStatus:integrity?"producer-supplied":"unavailable-in-sync-export",
+    flipY:true,wrapS:1000,wrapT:1000,minFilter:1008,magFilter:1006,generateMipmaps:true,
+    anisotropy:Math.max(1,Math.min(16,Number(sys.anisotropy)||8)),
+    repeat:Array.isArray(slot.repeat)?[...slot.repeat]:[1,1],offset:Array.isArray(slot.offset)?[...slot.offset]:[0,0],center:[.5,.5],rotation:(Number(slot.rotation)||0)*Math.PI/180};
 }
-pocketStudioRenderProfile=function pocketStudioRenderProfileWithGeneratedPack(sceneGraph){
+pocketStudioRenderProfile=function pocketStudioRenderProfileWithDeclaredMaterials(sceneGraph){
+  let declared=0;
+  function visit(node){
+    const list=Array.isArray(node?.material)?node.material:node?.material?[node.material]:[];
+    for(const material of list){
+      const role=String(material?.name||"");
+      if(!spec?.skinSystem?.enabled||!spec.skinSystem.slots?.[role])continue;
+      material.maps??={};
+      for(const [type,slot] of Object.entries(POCKET_STUDIO_MAP_TYPES)){
+        const ref=pocketStudioDeclaredTexture(role,type);
+        if(ref===undefined)continue;
+        material.maps[slot]=ref;
+        if(ref){declared++;if(type==="emissive"){material.emissive="#ffffff";material.emissiveIntensity=.75}}
+      }
+      const strength=Number(spec.skinSystem.slots[role].normalScale);
+      if(Number.isFinite(strength))material.normalScale=[strength,strength];
+    }
+    for(const child of node?.children||[])visit(child);
+  }
+  visit(sceneGraph?.root);
   const base=pocketStudioBaseRenderProfile(sceneGraph);
-  const textures=[...(base.textures||[])];
-  const byKey=new Map();
-  for(const texture of textures){const role=texture.colorData||(texture.colorSpace?"color":"data");byKey.set(`${texture.source}|${role}`,texture.id)}
-  const ensure=(file,slot)=>{
-    const meta=pocketStudioGeneratedTextureMeta(file,slot);const key=`${meta.source}|${meta.colorData}`;
-    if(byKey.has(key))return byKey.get(key);
-    const id=pocketStudioStableId("studio-texture",key);byKey.set(key,id);textures.push({id,...meta});return id;
-  };
-  const materials=(base.materials||[]).map(material=>{
-    if(Object.keys(material.textureSlots||{}).length)return material;
-    const role=String(material.name||"").trim().toLowerCase();const pack=POCKET_STUDIO_GENERATED_MATERIAL_PACK[role];
-    if(!pack)return material;
-    const textureSlots={};for(const [slot,file] of Object.entries(pack))textureSlots[slot]=ensure(file,slot);
-    return {...material,textureSlots,generatedMaterialRole:role};
-  });
-  return {...base,textures,materials,generatedMaterialPack:{id:"studio-starter-pbr-2k-v1",masterResolution:2048,hostApplied:true,colorDataSeparated:true}};
+  return {...base,generatedMaterialPack:{id:"studio-starter-pbr-2k-v1",masterResolution:2048,hostApplied:true,colorDataSeparated:true,
+    source:"selected-studio-skin-config",declaredBindings:declared,readiness:"source-declared-host-loads"}};
 };
 '''
     return html.replace(anchor, extension + '\n' + anchor, 1)
