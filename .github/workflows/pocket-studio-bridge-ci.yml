@@ -53,7 +53,13 @@ jobs:
             'pocket-character-motion-pack-v1',
             'pocketStudioReadyMotionPack',
             'Pocket motion pack missing usable',
-            'requiredActions:["idle","walk","run","jump","attack","hurt","skill","dead"]',
+            'requiredActions=["idle","walk","run","jump","attack","hurt","dead","capture_throw","summon_monster_throw","monster_command"]',
+            'unsupportedActions=Object.freeze',
+            'No distinct authored generic skill pose exists',
+            'No distinct authored ranged-weapon attack pose exists',
+            'capture_throw:"capture_throw_r"',
+            'events:[{type:"release"',
+            'events:[{type:"impact"',
             'keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0',
             'pocket-character-render-profile-v1',
             'metadata-only-host-applied',
@@ -66,6 +72,8 @@ jobs:
           for token in required:
             if token not in h:
               raise SystemExit('missing bridge/regression token: '+token)
+          if '"attack-ranged":"capture_throw_r"' in h or 'skill:"capture_throw_r"' in h:
+            raise SystemExit('Capture Throw must not masquerade as ranged attack or generic skill')
           match=re.search(r'const POCKET_STUDIO_TEXTURE_INTEGRITY=(\{.*?\});',h)
           if not match:
             raise SystemExit('Studio texture integrity map missing')
