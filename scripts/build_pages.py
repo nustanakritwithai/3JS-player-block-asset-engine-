@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import base64, lzma, shutil, hashlib, sys
+import base64, lzma, shutil, hashlib, json, sys
 
 root = Path(__file__).resolve().parents[1]
 parts_dir = root / 'deploy' / 'source_v1_8_4' / 'parts'
@@ -56,6 +56,16 @@ if base_actual != expected:
     raise SystemExit(f'V1.8.10.4 source checksum mismatch: {base_actual}')
 
 html = patch_pocket_studio_live_bridge(html)
+texture_root = root / 'assets' / 'textures'
+texture_integrity = {
+    path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in sorted(texture_root.rglob('*'))
+    if path.is_file() and path.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'}
+}
+marker = '__POCKET_STUDIO_TEXTURE_INTEGRITY__'
+if marker not in html:
+    raise SystemExit('Pocket Studio texture integrity marker missing')
+html = html.replace(marker, json.dumps(texture_integrity, sort_keys=True, separators=(',', ':')), 1)
 bridge_tokens = [
     'POCKET_STUDIO_CHARACTER_REQUEST',
     'POCKET_STUDIO_CHARACTER_PACKAGE',
@@ -64,6 +74,7 @@ bridge_tokens = [
     'three-group-scenegraph-v1',
     'provider:"studio-character"',
     'gameplayPolicy:{included:false',
+    'POCKET_STUDIO_TEXTURE_INTEGRITY=',
 ]
 for token in bridge_tokens:
     if token not in html:
