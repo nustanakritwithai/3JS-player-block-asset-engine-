@@ -47,6 +47,11 @@ jobs:
             'three-group-scenegraph-v1',
             'provider:"studio-character"',
             'gameplayPolicy:{included:false',
+            'pocket-character-motion-pack-v1',
+            'pocketStudioReadyMotionPack',
+            'Pocket motion pack missing usable',
+            'requiredActions:["idle","walk","run","jump","attack","hurt","skill","dead"]',
+            'keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0',
           ]
           for token in required:
             if token not in h:
