@@ -122,21 +122,17 @@ function pocketStudioSockets(){return {
   rightHand:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,0]},leftHand:{joint:pocketStudioJoint(["handL","wristL","elbowL"]),offset:[0,0,0]},
   head:{joint:pocketStudioJoint(["head","neck"]),offset:[0,0,0]},back:{joint:pocketStudioJoint(["chest","spine","pelvis"]),offset:[0,0,.12]},waist:{joint:pocketStudioJoint(["pelvis","chest"]),offset:[0,0,0]},
   vfxOrigin:{joint:pocketStudioJoint(["chest","pelvis"]),offset:[0,.12,-.18]},attackOrigin:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,-.08]},throwOrigin:{joint:pocketStudioJoint(["handR","wristR","elbowR"]),offset:[0,0,-.08]}}}
+function pocketStudioJoint(candidates){for(const name of candidates)if(joints?.[name])return name;return candidates[0]}
 function pocketStudioState(clip){return String(clip?.runtime?.transition?.state||clip?.runtime?.state||clip?.name||"idle").trim().replace(/[\s-]+/g,"_").toLowerCase()}
 const POCKET_STUDIO_MOTION_PACK_SCHEMA="pocket-character-motion-pack-v1";
-const POCKET_STUDIO_MOTION_PACK_VERSION="1.0.0";
-/*
- * This is deliberately an export-only library.  It uses the Studio's existing
- * pose-library templates, but never calls the editor buttons or appends to
- * spec.animations.  A fresh Studio therefore sends usable bone keyframes to
- * PocketMonster without silently changing the creator's document.
- */
+const POCKET_STUDIO_MOTION_PACK_VERSION="1.1.0";
 function pocketStudioReadyMotionPack(){
   const clip=(name,state,duration,loop,keys,options={})=>{
     const out=createTemplateClip(name,duration,30,keys,loop,"smooth");
     out.runtime.state=state;out.runtime.motionClass=options.motionClass||out.runtime.motionClass;
     out.runtime.motionSpeed=Number.isFinite(options.motionSpeed)?options.motionSpeed:out.runtime.motionSpeed;
     out.source={kind:"pocketmonster-default-motion-pack",studioVersion:"1.8.10.4",template:name};
+    if(Array.isArray(options.events))out.events=options.events.map(event=>({...event}));
     return out;
   };
   const k=(time,pose,side="R")=>({time,pose,side});
@@ -176,25 +172,33 @@ function pocketStudioReadyMotionPack(){
     clip("Faint_Core","faint",.92,false,[k(0,"idle"),k(.20,"crouch","R"),k(.54,"faint","R"),k(.92,"faint","R")],{motionClass:"custom",motionSpeed:0}),
     clip("Interact_Core","interact",.86,false,[k(0,"idle","R"),k(.18,"interactReach","R"),k(.46,"interactReach","R"),k(.68,"idle","R"),k(.86,"idle","R")],{motionClass:"custom",motionSpeed:0}),
     clip("Ball_Aim_Loop","ball_aim",1.6,true,[k(0,"ballAim","R"),k(.8,"ballAim","R"),k(1.6,"ballAim","R")],{motionClass:"custom",motionSpeed:0}),
-    clip("Attack_PoseLibrary","attack",.9,false,[k(0,"idle","R"),k(.28,"attackWindup","R"),k(.48,"attackImpact","R"),k(.9,"idle","R")],{motionClass:"action",motionSpeed:0}),
-    clip("Monster_Command_Core","monster_command",.82,false,[k(0,"idle","R"),k(.18,"monsterCommand","R"),k(.50,"monsterCommand","R"),k(.82,"idle","R")],{motionClass:"custom",motionSpeed:0})
+    clip("Attack_PoseLibrary","attack",.9,false,[k(0,"idle","R"),k(.28,"attackWindup","R"),k(.48,"attackImpact","R"),k(.9,"idle","R")],{motionClass:"action",motionSpeed:0,events:[{type:"impact",time:.48}]}),
+    clip("Monster_Command_Core","monster_command",.82,false,[k(0,"idle","R"),k(.18,"monsterCommand","R"),k(.50,"monsterCommand","R"),k(.82,"idle","R")],{motionClass:"custom",motionSpeed:0,events:[{type:"command",time:.50}]})
   ];
-  const throwClip=(name,state,duration,points)=>clip(name,state,duration,false,points,{motionClass:"action",motionSpeed:0});
+  const throwClip=(name,state,duration,releaseTime,points)=>clip(name,state,duration,false,points,{motionClass:"action",motionSpeed:0,events:[{type:"release",time:releaseTime}]});
   clips.push(
-    throwClip("Capture_Throw_R_Core","skill",.94,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.34,"throwWindup","R"),k(.56,"throwRelease","R"),k(.72,"throwFollow","R"),k(.94,"idle","R")]),
-    throwClip("Capture_Throw_L_Core","capture_throw_l",.94,[k(0,"ballReady","L"),k(.15,"ballAim","L"),k(.34,"throwWindup","L"),k(.56,"throwRelease","L"),k(.72,"throwFollow","L"),k(.94,"idle","L")]),
-    throwClip("Quick_Capture_Throw_R_Core","quick_capture_throw",.68,[k(0,"ballReady","R"),k(.08,"ballAim","R"),k(.20,"throwWindup","R"),k(.34,"throwRelease","R"),k(.50,"throwFollow","R"),k(.68,"idle","R")]),
-    throwClip("Power_Capture_Throw_R_Core","power_capture_throw",1.16,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.43,"throwWindup","R"),k(.68,"throwRelease","R"),k(.91,"throwFollow","R"),k(1.16,"idle","R")]),
-    throwClip("Summon_Monster_Throw_R_Core","summon_monster_throw",.98,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.32,"throwWindup","R"),k(.55,"throwRelease","R"),k(.74,"throwFollow","R"),k(.98,"idle","R")])
+    throwClip("Capture_Throw_R_Core","capture_throw_r",.94,.56,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.34,"throwWindup","R"),k(.56,"throwRelease","R"),k(.72,"throwFollow","R"),k(.94,"idle","R")]),
+    throwClip("Capture_Throw_L_Core","capture_throw_l",.94,.56,[k(0,"ballReady","L"),k(.15,"ballAim","L"),k(.34,"throwWindup","L"),k(.56,"throwRelease","L"),k(.72,"throwFollow","L"),k(.94,"idle","L")]),
+    throwClip("Quick_Capture_Throw_R_Core","quick_capture_throw",.68,.34,[k(0,"ballReady","R"),k(.08,"ballAim","R"),k(.20,"throwWindup","R"),k(.34,"throwRelease","R"),k(.50,"throwFollow","R"),k(.68,"idle","R")]),
+    throwClip("Power_Capture_Throw_R_Core","power_capture_throw",1.16,.68,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.43,"throwWindup","R"),k(.68,"throwRelease","R"),k(.91,"throwFollow","R"),k(1.16,"idle","R")]),
+    throwClip("Summon_Monster_Throw_R_Core","summon_monster_throw",.98,.55,[k(0,"ballReady","R"),k(.15,"ballAim","R"),k(.32,"throwWindup","R"),k(.55,"throwRelease","R"),k(.74,"throwFollow","R"),k(.98,"idle","R")])
   );
   const actionMap=Object.freeze({
-    idle:"idle",walk:"walk",run:"run",sprint:"sprint",jump:"jump",fall:"fall",land:"land",
-    attack:"attack","attack-melee":"attack",hurt:"hurt",dead:"dead",skill:"skill",
-    "attack-ranged":"skill",dodge_l:"dodge_l",dodge_r:"dodge_r",interact:"interact",
-    crouch_idle:"crouch_idle",crouch_walk:"crouch_walk",faint:"faint",get_up:"get_up"
+    idle:"idle",walk:"walk",run:"run",sprint:"sprint",start:"start",stop:"stop",
+    turn_r:"turn_r",turn_l:"turn_l",strafe_r:"strafe_r",strafe_l:"strafe_l",
+    jump:"jump",fall:"fall",land:"land",attack:"attack","attack-melee":"attack",
+    hurt:"hurt",dead:"dead",knockback:"knockback",dodge_l:"dodge_l",dodge_r:"dodge_r",interact:"interact",
+    crouch_idle:"crouch_idle",crouch_walk:"crouch_walk",faint:"faint",get_up:"get_up",ball_aim:"ball_aim",
+    monster_command:"monster_command",capture_throw:"capture_throw_r",capture_throw_r:"capture_throw_r",capture_throw_l:"capture_throw_l",
+    quick_capture_throw:"quick_capture_throw",power_capture_throw:"power_capture_throw",summon_monster_throw:"summon_monster_throw"
   });
+  const unsupportedActions=Object.freeze({
+    skill:"No distinct authored generic skill pose exists in the Studio template set; gameplay should remain on locomotion or select a specific authored visual.",
+    "attack-ranged":"No distinct authored ranged-weapon attack pose exists; capture throw is not a ranged-attack substitute."
+  });
+  const requiredActions=["idle","walk","run","jump","attack","hurt","dead","capture_throw","summon_monster_throw","monster_command"];
   return {schema:POCKET_STUDIO_MOTION_PACK_SCHEMA,version:POCKET_STUDIO_MOTION_PACK_VERSION,
-    source:"Character Studio ready-made templates",clips,actionMap,requiredActions:["idle","walk","run","jump","attack","hurt","skill","dead"]};
+    source:"Character Studio ready-made templates",clips,actionMap,unsupportedActions,requiredActions};
 }
 function pocketStudioAssertMotionPack(pack){
   const states=new Set(pack.clips.map(pocketStudioState));
@@ -202,6 +206,7 @@ function pocketStudioAssertMotionPack(pack){
     const state=pack.actionMap[action];const found=pack.clips.find(clip=>pocketStudioState(clip)===state);
     if(!found||!Array.isArray(found.keyframes)||found.keyframes.length<2)throw new Error(`Pocket motion pack missing usable ${action} clip`);
   }
+  for(const action of Object.keys(pack.unsupportedActions||{}))if(pack.actionMap[action])throw new Error(`Unsupported Pocket motion action must not be mapped: ${action}`);
   if(states.size!==pack.clips.length)throw new Error("Pocket motion pack has duplicate runtime states");
 }
 function buildPocketStudioCharacterPackage(request={}){
@@ -213,12 +218,12 @@ function buildPocketStudioCharacterPackage(request={}){
   const heightCandidates=[spec?.body?.height,spec?.character?.height,spec?.metrics?.height];let height=1.8;for(const value of heightCandidates){const n=Number(value);if(Number.isFinite(n)&&n>.2&&n<10){height=n;break}}
   const common={id,kind:"character",provider:"studio-character",style:"blocky-bighead-studio-v1",surfaceStyle:"pbr-studio-v1",rig:"studio-three-group-v1",metrics:{height},roles:{player:{}}};
   const sceneGraph=pocketStudioSceneGraph(characterRoot);const renderProfile=pocketStudioRenderProfile(sceneGraph);
-  return {schema:"pocket-character-runtime-v1",schemaVersion:"1.1.0",generatedBy:{product:"3JS Player Block Asset Engine",studioVersion:"1.8.10.4",generatorVersion:"live-bridge-v1",generatedAt:new Date().toISOString()},
+  return {schema:"pocket-character-runtime-v1",schemaVersion:"1.2.0",generatedBy:{product:"3JS Player Block Asset Engine",studioVersion:"1.8.10.4",generatorVersion:"live-bridge-v1",generatedAt:new Date().toISOString()},
     target:{game:"PocketMonster",assetEngine:"asset-presentation",provider:"studio-character",assetHandleContract:["root","rig","play","update","anchor","bounds","setAppearance","dispose"]},
     manifest:{...common,name,contract:"presentation-only"},catalogEntry:{...common},character:clean,sceneGraph,renderProfile,
     rig:{architecture:"THREE.Group",schema:"studio-rig-v1",root:"characterRoot",jointNames:Object.keys(joints||{}),jointBindings:pocketStudioJointBindings(characterRoot),sockets:pocketStudioSockets()},
-    motionPack:{schema:motionPack.schema,version:motionPack.version,source:motionPack.source,requiredActions:motionPack.requiredActions,actionMap:motionPack.actionMap},
-    animations,animationIndex:animations.map(clip=>({id:clip.id||null,name:clip.name||"Animation",state:pocketStudioState(clip),duration:Number(clip.duration)||0,loop:!!clip.loop,keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0})),
+    motionPack:{schema:motionPack.schema,version:motionPack.version,source:motionPack.source,requiredActions:motionPack.requiredActions,actionMap:motionPack.actionMap,unsupportedActions:motionPack.unsupportedActions},
+    animations,animationIndex:animations.map(clip=>({id:clip.id||null,name:clip.name||"Animation",state:pocketStudioState(clip),duration:Number(clip.duration)||0,loop:!!clip.loop,keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0,events:Array.isArray(clip.events)?clip.events.map(event=>({...event})):[]})),
     gameplayPolicy:{included:false,authority:"Pocket Monster / Pirate Fruit server-domain systems",forbiddenKeys:[...POCKET_STUDIO_FORBIDDEN_KEYS].sort()},transport:{format:"postmessage-json-envelope",encoding:"structured-clone"}};
 }
 function pocketStudioAllowedOrigin(origin){
@@ -226,7 +231,7 @@ function pocketStudioAllowedOrigin(origin){
   try{const u=new URL(origin);return (u.protocol==="https:"&&(u.hostname==="pocketmonster-game.web.app"||u.hostname==="nustanakritwithai.github.io"))||((u.hostname==="localhost"||u.hostname==="127.0.0.1")&&(u.protocol==="http:"||u.protocol==="https:"))}catch{return false}
 }
 if(typeof window!=="undefined"){
-  window.POCKET_STUDIO_CHARACTER_BRIDGE=Object.freeze({version:"1",buildPackage:buildPocketStudioCharacterPackage});
+  window.POCKET_STUDIO_CHARACTER_BRIDGE=Object.freeze({version:"1.2",buildPackage:buildPocketStudioCharacterPackage});
   window.addEventListener("message",event=>{
     if(event?.data?.type!==POCKET_STUDIO_BRIDGE_REQUEST||!pocketStudioAllowedOrigin(event.origin)||!event.source)return;
     const requestId=String(event.data.requestId||"");
