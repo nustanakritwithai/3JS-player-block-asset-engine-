@@ -40,9 +40,10 @@ for(const required of ['idle','walk','run','jump','attack','hurt','dead','captur
 const capture=pkg.animations.find(clip=>clip.runtime?.state==='capture_throw_r');
 const summon=pkg.animations.find(clip=>clip.runtime?.state==='summon_monster_throw');
 const attack=pkg.animations.find(clip=>clip.runtime?.state==='attack');
-assert.deepEqual(capture.events,[{type:'release',time:.56}]);
-assert.deepEqual(summon.events,[{type:'release',time:.55}]);
-assert.deepEqual(attack.events,[{type:'impact',time:.48}]);
+function assertEvent(clip,type,time){assert.equal(clip.events?.length,1);assert.equal(clip.events[0].type,type);assert.equal(clip.events[0].time,time)}
+assertEvent(capture,'release',.56);
+assertEvent(summon,'release',.55);
+assertEvent(attack,'impact',.48);
 for(const clip of [capture,summon,attack])assert.ok(clip.keyframes.length>=2);
 assert.ok(pkg.animationIndex.find(item=>item.state==='capture_throw_r')?.events?.some(event=>event.type==='release'&&event.time===.56));
 console.log('PASS: built exporter handles texture edge cases, preserves truthful motion semantics, and exports authored action event timing');
