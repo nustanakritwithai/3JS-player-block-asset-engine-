@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/build_pages.py'
+      - 'scripts/test_pocket_studio_texture_export.mjs'
       - 'scripts/patch_pocket_studio_live_bridge.py'
       - '.github/workflows/pocket-studio-bridge-ci.yml'
   workflow_dispatch:
@@ -31,6 +32,8 @@ jobs:
           python scripts/verify_textures.py assets/textures 2048
       - name: Build Studio with Pocket bridge
         run: python scripts/build_pages.py
+      - name: Execute built texture exporter regression
+        run: node scripts/test_pocket_studio_texture_export.mjs
       - name: Verify bridge contract and preserved V1.8.10.4 behavior
         run: |
           python - <<'PY'
