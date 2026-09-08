@@ -58,11 +58,12 @@ implement the bounded host consumer below before it becomes a render feature:
 
 Studio exports only same-origin HTTPS texture URLs and includes texture sampling
 metadata (`colorSpace`, `flipY`, wrap, filters, mipmaps, anisotropy, and UV
-transform). It emits a SHA-256 only when an upstream texture supplies one; the
-browser's synchronous Three.js export path cannot truthfully calculate bytes it
-cannot read. The Pocket host must therefore obtain and verify an integrity value
-before binding a texture. The package does not send image bytes, executable
-code, light objects, gameplay data, or renderer commands.
+transform). During its build it hashes each shipped Studio texture and embeds
+the matching SHA-256 in the exported manifest. Imported/custom browser-only
+textures that have no readable source bytes remain explicitly marked
+`unavailable-in-sync-export`; Pocket must not bind those until a verified asset
+pipeline exists. The package does not send image bytes, executable code, light
+objects, gameplay data, or renderer commands.
 
 ## Bounded host implementation
 
