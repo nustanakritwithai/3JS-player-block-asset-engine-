@@ -73,13 +73,15 @@ function pocketStudioSceneGraph(root){
 }
 function pocketStudioStableId(prefix,value){let hash=2166136261;for(const ch of String(value||"")){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}return `${prefix}-${(hash>>>0).toString(36)}`}
 function pocketStudioSafeTextureSource(source){
-  try{const url=new URL(source,location.href);if(url.protocol!=="https:"||url.origin!==location.origin)return null;return url.href}catch{return null}
+  if(typeof source!=="string"||!source.trim())return null;
+  try{const url=new URL(source.trim(),location.href);if(url.protocol!=="https:"||url.origin!==location.origin)return null;return url.href}catch{return null}
 }
 /* Metadata only: PocketMonster's host must fetch, verify and bind textures. */
 function pocketStudioRenderProfile(sceneGraph){
   const textures=[],materials=[],rejectedSources=[];const textureBySource=new Map();
   const textureId=(ref,slot)=>{
-    const source=pocketStudioSafeTextureSource(ref?.source);
+    if(!ref||typeof ref!=="object"||Array.isArray(ref))return null;
+    const source=pocketStudioSafeTextureSource(ref.source);
     if(!source){if(ref?.source)rejectedSources.push({source:String(ref.source),slot,reason:"requires same-origin HTTPS Studio asset"});return null}
     if(!textureBySource.has(source)){
       const id=pocketStudioStableId("studio-texture",source);textureBySource.set(source,id);
