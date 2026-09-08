@@ -1,8 +1,17 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
 // Run the production bridge from built output, including its public exporter.
 const html=fs.readFileSync('_site/index.html','utf8');
+// Check the actual ES module, not just the permissive VM script context.
+const moduleCode=[...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].at(-1)?.[1];
+assert.ok(moduleCode);
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'studio-module-'));
+try{const file=path.join(temp,'studio.mjs');fs.writeFileSync(file,moduleCode);const check=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(check.status,0,check.stderr)}
+finally{fs.rmSync(temp,{recursive:true,force:true})}
 const start=html.indexOf('const POCKET_STUDIO_BRIDGE_REQUEST=');
 const end=html.indexOf('function createAttackTemplate(){',start);
 assert.ok(start>=0&&end>start);
@@ -25,7 +34,7 @@ for(const ref of [null,undefined,false,123,'',[],{},{source:null},{source:''}]){
 const integrity='a'.repeat(64);
 for(const source of ['/assets/textures/base.png','https://studio.example/assets/textures/base.png']){
  root.children[0].material=Object.fromEntries(slots.map(slot=>[slot,{image:{src:source},colorSpace:'srgb',userData:{pocketIntegritySha256:integrity}}]));
- const pkg=build();assert.equal(pkg.renderProfile.textures.length,1);const texture=pkg.renderProfile.textures[0];assert.equal(texture.source,'https://studio.example/assets/textures/base.png');assert.equal(texture.integrity,integrity);assert.equal(texture.colorSpace,'srgb');for(const slot of slots)assert.equal(pkg.renderProfile.materials[0].textureSlots[slot],texture.id);
+ const pkg=build();assert.equal(pkg.renderProfile.textures.length,2);const texture=pkg.renderProfile.textures.find(t=>t.colorSpace==='srgb');assert.equal(texture.source,'https://studio.example/assets/textures/base.png');assert.equal(texture.integrity,integrity);assert.equal(texture.colorSpace,'srgb');const mapped=pkg.renderProfile.materials[0].textureSlots;assert.equal(mapped.map,mapped.emissiveMap);assert.notEqual(mapped.map,mapped.normalMap);assert.equal(pkg.renderProfile.textures.find(t=>t.id===mapped.normalMap).colorSpace,'');
 }
 const pkg=build();
 assert.equal(pkg.motionPack.version,'1.1.0');
@@ -47,3 +56,24 @@ assertEvent(attack,'impact',.48);
 for(const clip of [capture,summon,attack])assert.ok(clip.keyframes.length>=2);
 assert.ok(pkg.animationIndex.find(item=>item.state==='capture_throw_r')?.events?.some(event=>event.type==='release'&&event.time===.56));
 console.log('PASS: built exporter handles texture edge cases, preserves truthful motion semantics, and exports authored action event timing');
+
+// Selected material sources/UVs must not depend on async loader timing.
+context.spec.skinSystem={enabled:true,anisotropy:4,slots:{skin:{asset:'skin_warm',repeat:[2,3],offset:[.1,.2],rotation:30,normalScale:.4}}};
+context.textureSourceFor=(_role,type)=>({baseColor:'/assets/textures/skin_warm_basecolor.webp',normal:'/assets/textures/skin_warm_normal.png'}[type]||null);
+root.children[0].material={name:'skin',maps:{}};
+const cold=build();
+root.children[0].material={name:'skin',map:{image:{src:'old-cached-canvas'}},normalMap:{image:{src:'old-cached-canvas'}}};
+const warm=build();
+assert.equal(JSON.stringify(cold.renderProfile),JSON.stringify(warm.renderProfile),'cold/warm exports must have identical material descriptors');
+assert.equal(cold.renderProfile.textures.length,2);
+for(const texture of cold.renderProfile.textures){assert.match(texture.integrity,/^[a-f0-9]{64}$/);assert.equal(texture.repeat[0],2);assert.equal(texture.repeat[1],3);assert.ok(Math.abs(texture.rotation-Math.PI/6)<1e-9)}
+const stable=build();assert.equal(stable.animations[0].id,build().animations[0].id,'default template ids must be stable');
+context.textureSourceFor=()=> 'blob:https://studio.example/creator-image';
+const custom=build();assert.equal(custom.renderProfile.textures.length,0,'custom blob must not silently become starter material');assert.ok(custom.renderProfile.rejectedSources.length>0);
+context.spec.skinSystem.enabled=false;
+root.children[0].material={name:'skin'};
+assert.equal(build().renderProfile.textures.length,0,'explicitly disabled skins remain untextured');
+// A genuinely authored skill fills the gap; no substitution with Capture Throw.
+context.spec.animations=[{id:'authored-skill',name:'Skill',duration:1,runtime:{state:'skill'},keyframes:[{time:0,joints:{chest:{rotation:[0,0,0]}}},{time:1,joints:{chest:{rotation:[1,0,0]}}}]}];
+const authored=build();assert.equal(authored.motionPack.actionMap.skill,'skill');assert.equal(authored.motionPack.unsupportedActions.skill,undefined);assert.equal(authored.animations.find(c=>c.id==='authored-skill').keyframes.length,2);
+console.log('PASS: final module syntax, selected PBR 2K sources, cold/warm equality, per-slot color data, custom/disabled preservation, stable ids, and authored overrides');
