@@ -30,6 +30,7 @@ from patch_v1_8_10_2 import patch as patch_v1_8_10_2
 from patch_v1_8_10_3 import patch as patch_v1_8_10_3
 from patch_v1_8_10_4 import patch as patch_v1_8_10_4
 from patch_pocket_studio_live_bridge import patch as patch_pocket_studio_live_bridge
+from patch_pocket_studio_material_pack import patch as patch_pocket_studio_material_pack
 
 html = patch_v1_8_4_1(html)
 html = patch_v1_8_5(html)
@@ -56,6 +57,7 @@ if base_actual != expected:
     raise SystemExit(f'V1.8.10.4 source checksum mismatch: {base_actual}')
 
 html = patch_pocket_studio_live_bridge(html)
+html = patch_pocket_studio_material_pack(html)
 texture_root = root / 'assets' / 'textures'
 texture_integrity = {
     path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -75,6 +77,8 @@ bridge_tokens = [
     'provider:"studio-character"',
     'gameplayPolicy:{included:false',
     'POCKET_STUDIO_TEXTURE_INTEGRITY=',
+    'studio-starter-pbr-2k-v1',
+    'colorDataSeparated:true',
 ]
 for token in bridge_tokens:
     if token not in html:
