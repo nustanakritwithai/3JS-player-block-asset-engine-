@@ -32,7 +32,14 @@ function pocketStudioSanitize(value,seen=new WeakSet()){
 function pocketStudioTextureRef(texture){
   if(!texture)return null;const image=texture.image||texture.source?.data||null;
   const source=typeof image?.currentSrc==="string"&&image.currentSrc?image.currentSrc:typeof image?.src==="string"?image.src:null;
-  return {source,name:texture.name||null,colorSpace:texture.colorSpace||null,wrapS:texture.wrapS??null,wrapT:texture.wrapT??null,flipY:typeof texture.flipY==="boolean"?texture.flipY:null};
+  const suppliedIntegrity=typeof texture?.userData?.pocketIntegritySha256==="string"?texture.userData.pocketIntegritySha256:typeof texture?.userData?.sha256==="string"?texture.userData.sha256:null;
+  const integrity=/^[a-f0-9]{64}$/i.test(suppliedIntegrity||"")?suppliedIntegrity.toLowerCase():null;
+  return {source,name:texture.name||null,colorSpace:texture.colorSpace||null,wrapS:texture.wrapS??null,wrapT:texture.wrapT??null,
+    minFilter:texture.minFilter??null,magFilter:texture.magFilter??null,generateMipmaps:typeof texture.generateMipmaps==="boolean"?texture.generateMipmaps:null,
+    anisotropy:Number.isFinite(texture.anisotropy)?texture.anisotropy:null,flipY:typeof texture.flipY==="boolean"?texture.flipY:null,
+    repeat:texture.repeat?[Number(texture.repeat.x)||1,Number(texture.repeat.y)||1]:[1,1],offset:texture.offset?[Number(texture.offset.x)||0,Number(texture.offset.y)||0]:[0,0],
+    center:texture.center?[Number(texture.center.x)||0,Number(texture.center.y)||0]:[0,0],rotation:Number(texture.rotation)||0,
+    integrity,integrityStatus:integrity?"producer-supplied":"unavailable-in-sync-export"};
 }
 function pocketStudioMaterial(material){
   if(Array.isArray(material))return material.map(pocketStudioMaterial);if(!material)return null;
@@ -60,6 +67,45 @@ function pocketStudioSceneGraph(root){
   const graph=pocketStudioSceneNode(root),stats={nodes:0,meshes:0,vertices:0,triangles:0,externalTextureRefs:0};
   const visit=node=>{stats.nodes++;if(node.nodeType==="mesh"){stats.meshes++;const pos=node.geometry?.attributes?.position;stats.vertices+=Number(pos?.count)||0;const idx=node.geometry?.index?.count;stats.triangles+=idx?Math.floor(idx/3):Math.floor((Number(pos?.count)||0)/3);const mats=Array.isArray(node.material)?node.material:[node.material];for(const mat of mats)for(const ref of Object.values(mat?.maps||{}))if(ref?.source)stats.externalTextureRefs++}for(const child of node.children||[])visit(child)};
   visit(graph);return {schema:"three-group-scenegraph-v1",root:graph,stats};
+}
+function pocketStudioStableId(prefix,value){let hash=2166136261;for(const ch of String(value||"")){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}return `${prefix}-${(hash>>>0).toString(36)}`}
+function pocketStudioSafeTextureSource(source){
+  try{const url=new URL(source,location.href);if(url.protocol!=="https:"||url.origin!==location.origin)return null;return url.href}catch{return null}
+}
+/* Metadata only: PocketMonster's host must fetch, verify and bind textures. */
+function pocketStudioRenderProfile(sceneGraph){
+  const textures=[],materials=[],rejectedSources=[];const textureBySource=new Map();
+  const textureId=(ref,slot)=>{
+    const source=pocketStudioSafeTextureSource(ref?.source);
+    if(!source){if(ref?.source)rejectedSources.push({source:String(ref.source),slot,reason:"requires same-origin HTTPS Studio asset"});return null}
+    if(!textureBySource.has(source)){
+      const id=pocketStudioStableId("studio-texture",source);textureBySource.set(source,id);
+      textures.push({id,source,colorSpace:ref.colorSpace??null,flipY:ref.flipY??null,wrapS:ref.wrapS??null,wrapT:ref.wrapT??null,
+        minFilter:ref.minFilter??null,magFilter:ref.magFilter??null,generateMipmaps:ref.generateMipmaps??null,anisotropy:ref.anisotropy??null,
+        repeat:ref.repeat||[1,1],offset:ref.offset||[0,0],center:ref.center||[0,0],rotation:ref.rotation||0,
+        integrity:ref.integrity||null,integrityStatus:ref.integrityStatus||"unavailable-in-sync-export"});
+    }
+    return textureBySource.get(source);
+  };
+  const visit=(node,path=[])=>{
+    if(node?.nodeType==="mesh"){
+      const list=Array.isArray(node.material)?node.material:[node.material];
+      list.forEach((material,index)=>{
+        const textureSlots={};for(const [slot,ref] of Object.entries(material?.maps||{})){const id=textureId(ref,slot);if(id)textureSlots[slot]=id}
+        materials.push({id:pocketStudioStableId("studio-material",`${path.join(".")}:${index}:${material?.name||""}`),nodePath:path,materialIndex:index,
+          name:material?.name||null,model:material?.type||"MeshStandardMaterial",textureSlots,
+          scalar:{color:material?.color??null,emissive:material?.emissive??null,emissiveIntensity:material?.emissiveIntensity??0,roughness:material?.roughness??null,metalness:material?.metalness??null,opacity:material?.opacity??1,transparent:!!material?.transparent,alphaTest:material?.alphaTest??0,side:material?.side??null,vertexColors:!!material?.vertexColors,flatShading:!!material?.flatShading}});
+      });
+    }
+    (node?.children||[]).forEach((child,index)=>visit(child,[...path,index]));
+  };
+  visit(sceneGraph?.root,[]);
+  const look=spec?.look||{};
+  return {schema:"pocket-character-render-profile-v1",version:"1.0.0",mode:"metadata-only-host-applied",
+    sourcePolicy:{allowlistedOrigins:[location.origin],sameOriginHttpsOnly:true,hostMustVerifyIntegrity:true},textures,materials,rejectedSources,
+    shadow:{cast:!!look.shadows,receive:!!look.shadows,requiresExistingHostRenderer:true},
+    lightingProfile:{id:`studio-${String(look.preset||"studio").replace(/[^a-z0-9_-]/gi,"-").toLowerCase()}-advisory-v1`,mode:"host-advisory-no-light-objects",requiresExistingHostRenderer:true,createsRenderer:false,createsLights:false,
+      settings:{exposure:Number(look.exposure)||1,key:Number(look.key)||0,rim:Number(look.rim)||0,ambient:Number(look.ambient)||0,keyColor:look.keyColor||null,rimColor:look.rimColor||null,fillColor:look.fillColor||null,shadowEnabled:!!look.shadows}}};
 }
 function pocketStudioJointBindings(root){
   const paths=new Map();const visit=(node,path)=>{paths.set(node,path);(node?.children||[]).forEach((child,index)=>visit(child,[...path,index]))};visit(root,[]);const bindings={};
@@ -161,9 +207,10 @@ function buildPocketStudioCharacterPackage(request={}){
   const authoredStates=new Set(authored.map(pocketStudioState));const animations=[...motionPack.clips.filter(clip=>!authoredStates.has(pocketStudioState(clip))),...authored];
   const heightCandidates=[spec?.body?.height,spec?.character?.height,spec?.metrics?.height];let height=1.8;for(const value of heightCandidates){const n=Number(value);if(Number.isFinite(n)&&n>.2&&n<10){height=n;break}}
   const common={id,kind:"character",provider:"studio-character",style:"blocky-bighead-studio-v1",surfaceStyle:"pbr-studio-v1",rig:"studio-three-group-v1",metrics:{height},roles:{player:{}}};
+  const sceneGraph=pocketStudioSceneGraph(characterRoot);const renderProfile=pocketStudioRenderProfile(sceneGraph);
   return {schema:"pocket-character-runtime-v1",schemaVersion:"1.1.0",generatedBy:{product:"3JS Player Block Asset Engine",studioVersion:"1.8.10.4",generatorVersion:"live-bridge-v1",generatedAt:new Date().toISOString()},
     target:{game:"PocketMonster",assetEngine:"asset-presentation",provider:"studio-character",assetHandleContract:["root","rig","play","update","anchor","bounds","setAppearance","dispose"]},
-    manifest:{...common,name,contract:"presentation-only"},catalogEntry:{...common},character:clean,sceneGraph:pocketStudioSceneGraph(characterRoot),
+    manifest:{...common,name,contract:"presentation-only"},catalogEntry:{...common},character:clean,sceneGraph,renderProfile,
     rig:{architecture:"THREE.Group",schema:"studio-rig-v1",root:"characterRoot",jointNames:Object.keys(joints||{}),jointBindings:pocketStudioJointBindings(characterRoot),sockets:pocketStudioSockets()},
     motionPack:{schema:motionPack.schema,version:motionPack.version,source:motionPack.source,requiredActions:motionPack.requiredActions,actionMap:motionPack.actionMap},
     animations,animationIndex:animations.map(clip=>({id:clip.id||null,name:clip.name||"Animation",state:pocketStudioState(clip),duration:Number(clip.duration)||0,loop:!!clip.loop,keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0})),
