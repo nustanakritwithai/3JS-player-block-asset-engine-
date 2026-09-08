@@ -54,6 +54,8 @@ jobs:
             'keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0',
             'pocket-character-render-profile-v1',
             'metadata-only-host-applied',
+            'POCKET_STUDIO_TEXTURE_INTEGRITY=',
+            'producer-supplied',
             'hostMustVerifyIntegrity:true',
             'requiresExistingHostRenderer:true',
             'createsRenderer:false,createsLights:false',
@@ -61,6 +63,13 @@ jobs:
           for token in required:
             if token not in h:
               raise SystemExit('missing bridge/regression token: '+token)
+          match=re.search(r'const POCKET_STUDIO_TEXTURE_INTEGRITY=(\{.*?\});',h)
+          if not match:
+            raise SystemExit('Studio texture integrity map missing')
+          import json
+          integrity=json.loads(match.group(1))
+          if len(integrity)<20 or not all(re.fullmatch(r'[0-9a-f]{64}',value) for value in integrity.values()):
+            raise SystemExit('Studio texture integrity map is incomplete or invalid')
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
             raise SystemExit('module script not found')
