@@ -10,6 +10,8 @@ def patch(html):
     bridge = r'''const POCKET_STUDIO_BRIDGE_REQUEST="POCKET_STUDIO_CHARACTER_REQUEST";
 const POCKET_STUDIO_BRIDGE_RESPONSE="POCKET_STUDIO_CHARACTER_PACKAGE";
 const POCKET_STUDIO_BRIDGE_ERROR="POCKET_STUDIO_CHARACTER_ERROR";
+/* build_pages.py replaces this marker with SHA-256 values for shipped textures. */
+const POCKET_STUDIO_TEXTURE_INTEGRITY=__POCKET_STUDIO_TEXTURE_INTEGRITY__;
 const POCKET_STUDIO_FORBIDDEN_KEYS=new Set([
   "hp","hpcurrent","hpmax","atk","def","spatk","spdef","spd","speed","vitality","combat","blade","ranged","fruitpower","mastery",
   "mana","coins","capture","capturechance","skill","collider","interactionradius","save","savepayload","level","exp","experience","damage"
@@ -33,7 +35,8 @@ function pocketStudioTextureRef(texture){
   if(!texture)return null;const image=texture.image||texture.source?.data||null;
   const source=typeof image?.currentSrc==="string"&&image.currentSrc?image.currentSrc:typeof image?.src==="string"?image.src:null;
   const suppliedIntegrity=typeof texture?.userData?.pocketIntegritySha256==="string"?texture.userData.pocketIntegritySha256:typeof texture?.userData?.sha256==="string"?texture.userData.sha256:null;
-  const integrity=/^[a-f0-9]{64}$/i.test(suppliedIntegrity||"")?suppliedIntegrity.toLowerCase():null;
+  let builtIntegrity=null;try{const path=new URL(source,location.href).pathname;const marker="/assets/";const at=path.indexOf(marker);builtIntegrity=at>=0?POCKET_STUDIO_TEXTURE_INTEGRITY[`assets/${path.slice(at+marker.length)}`]||null:null}catch{}
+  const integrity=/^[a-f0-9]{64}$/i.test(suppliedIntegrity||builtIntegrity||"")?String(suppliedIntegrity||builtIntegrity).toLowerCase():null;
   return {source,name:texture.name||null,colorSpace:texture.colorSpace||null,wrapS:texture.wrapS??null,wrapT:texture.wrapT??null,
     minFilter:texture.minFilter??null,magFilter:texture.magFilter??null,generateMipmaps:typeof texture.generateMipmaps==="boolean"?texture.generateMipmaps:null,
     anisotropy:Number.isFinite(texture.anisotropy)?texture.anisotropy:null,flipY:typeof texture.flipY==="boolean"?texture.flipY:null,
