@@ -7,6 +7,9 @@ on:
       - 'scripts/build_pages.py'
       - 'scripts/test_pocket_studio_texture_export.mjs'
       - 'scripts/patch_pocket_studio_live_bridge.py'
+      - 'scripts/patch_pocket_studio_material_pack.py'
+      - 'scripts/patch_v1_8_10_5_blue_explorer.py'
+      - 'assets/characters/**'
       - '.github/workflows/pocket-studio-bridge-ci.yml'
   workflow_dispatch:
 
@@ -30,18 +33,21 @@ jobs:
         run: |
           python scripts/generate_textures.py --output assets/textures --resolution 2048
           python scripts/verify_textures.py assets/textures 2048
-      - name: Build Studio with Pocket bridge
+      - name: Build Studio with Pocket bridge and Blue Explorer primary
         run: python scripts/build_pages.py
       - name: Execute built texture exporter regression
         run: node scripts/test_pocket_studio_texture_export.mjs
-      - name: Verify bridge contract and preserved V1.8.10.4 behavior
+      - name: Verify bridge contract, Blue Explorer default and preserved V1.8.10.4 behavior
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
+          import re, json
           h=Path('_site/index.html').read_text(encoding='utf-8')
           required=[
-            'Character Prototype Studio V1.8.10.4',
+            'Character Prototype Studio V1.8.10.5',
+            'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
+            'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
+            'model.root.userData.engineRole="primary-character"',
             'throwStyle:"overhand-baseball"',
             'POCKET_STUDIO_CHARACTER_REQUEST',
             'POCKET_STUDIO_CHARACTER_PACKAGE',
@@ -71,13 +77,12 @@ jobs:
           ]
           for token in required:
             if token not in h:
-              raise SystemExit('missing bridge/regression token: '+token)
+              raise SystemExit('missing bridge/Blue Explorer regression token: '+token)
           if '"attack-ranged":"capture_throw_r"' in h or 'skill:"capture_throw_r"' in h:
             raise SystemExit('Capture Throw must not masquerade as ranged attack or generic skill')
           match=re.search(r'const POCKET_STUDIO_TEXTURE_INTEGRITY=(\{.*?\});',h)
           if not match:
             raise SystemExit('Studio texture integrity map missing')
-          import json
           integrity=json.loads(match.group(1))
           if len(integrity)<20 or not all(re.fullmatch(r'[0-9a-f]{64}',value) for value in integrity.values()):
             raise SystemExit('Studio texture integrity map is incomplete or invalid')
@@ -85,6 +90,6 @@ jobs:
           if not scripts:
             raise SystemExit('module script not found')
           Path('/tmp/studio-pocket-bridge.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('Pocket Studio live bridge contract gate passed')
+          print('Pocket Studio + Blue Explorer primary contract gate passed')
           PY
           node --check /tmp/studio-pocket-bridge.mjs
