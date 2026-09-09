@@ -1,51 +1,62 @@
 # 3JS Player Block Asset Engine
 
-Current checkpoint: **Character Prototype Studio V1.8.10.4 — Baseball Throw Motion Hotfix**.
+Current checkpoint: **Character Prototype Studio V1.8.10.5 — Blue Explorer Primary Character**.
 
 Live GitHub Pages:
 
 https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
-## Current priority
+## Current primary character
 
-Make the capture-ball throw read visually as an **overhand baseball-style throw**, not a side-arm / frisbee throw, while preserving the renderer and all existing gameplay animation systems.
+**Blue Explorer** is now the default visual/rig character of the Character Engine.
 
-## V1.8.10.4 — Baseball Throw Motion Hotfix
+The previous generated block character is preserved as **Legacy/Debug fallback**. V1.8.10.5 does not rebuild the animation engine; it retargets the existing engine to the Blue Explorer rigid-pivot model.
 
-The previous Monster Ball throw used too much horizontal sweep and side lean. V1.8.10.4 changes the throw signature to:
+## Blue Explorer integration
 
-`Back-foot load → arm cocked above/behind shoulder → front-foot step → elbow leads → overhand release → wrist snap → cross-body follow-through → recover`
+Source model characteristics:
 
-### Throw changes
+- procedural Three.js geometry; no GLB/OBJ dependency
+- rigid-part pivot rig
+- articulated shoulder → elbow → wrist chains
+- articulated hip → knee → ankle chains
+- neck → head hierarchy
+- generated local materials/textures
 
-- Attack-weight style changes from `horizontal` to `overhead` for capture/summon throw clips.
-- Throw Body Dynamics reduce lateral/side motion and increase forward drive.
-- Throwing arm now carries more of the motion while pelvis/chest rotation remains supporting rather than dominating.
-- Wind-up keeps the elbow high and bent behind the shoulder.
-- Release extends the arm above shoulder level instead of sweeping sideways.
-- Follow-through crosses the body like a baseball throw.
-- Clip metadata records `throwStyle = overhand-baseball`.
+Engine adapter:
 
-Quick / Standard / Power / Summon retain their separate release timings from V1.8.10.
+- converts presentation pivots into `pelvis → chest → neck/head`
+- reparents shoulders under chest and hips under pelvis while preserving bind-pose geometry
+- maps Blue Explorer spatial sides to engine `L/R` joint conventions
+- exposes engine joints `pelvis`, `chest`, `neck`, `head`, shoulders, elbows, wrists, hips, knees and ankles
+- exposes `hand.L`, `hand.R`, `foot.L`, `foot.R`, `chest`, `back`, `head` and `root` sockets
+- keeps the old `buildCharacter` implementation as `buildLegacyCharacter`
+- falls back to Legacy/Debug if Blue Explorer construction fails
 
-## Preserved fixes and systems
+## Existing animation/runtime systems preserved
 
-- V1.8.10.3 `clip is not defined` boot fix
-- V1.8.10.2 core-first Three.js boot and optional editor-control fallback
-- Monster Ball `ball.release`, `capture.throw`, `monster.summon`
-- Twist Isolation
+- Baseball-style Monster Ball Capture Throw / Summon Throw
+- `ball.release`, `capture.throw`, `monster.summon`
+- Walk / Run / Sprint
+- Jump / Fall / Land / Crouch
+- Dodge / Hit / Knockback / Get Up / Death / Faint / Interact
+- Foot Plant + Leg Response
+- Twist Isolation / Action Body Dynamics
 - Walk lateral cap `0.016m`
-- distinct Run/Sprint
 - Foot Plant max root correction `0.028m`
-- Jump/Fall/Land/Crouch
-- Dodge/Hit/Knockback/Get Up/Death/Faint/Interact
-- rigid `THREE.Group` rig
-- 2K PBR gate
+
+## Pocket Studio bridge preserved
+
+V1.8.10.5 is layered **after** the current Pocket Studio live bridge and deterministic PBR material export patches. The producer contract remains presentation-only and continues to export scene graph, rig bindings, sockets, motion pack and render-profile metadata.
+
+## Source integrity
+
+The Blue Explorer runtime factory is stored as deterministic compressed source parts under `assets/characters/`. CI reconstructs the factory and verifies its SHA-256 before injecting it into the final Studio artifact.
 
 ## Roadmap
 
-- **V1.8.10.4** — baseball-style capture/summon throw visual hotfix
-- **V1.8.11** — Core Animation QA / Transitions after live visual acceptance
+- **V1.8.10.5** — Blue Explorer becomes primary Character Engine model
+- **V1.8.11** — Blue Explorer animation QA / transitions / visual acceptance
 
 ## Development rule
 
