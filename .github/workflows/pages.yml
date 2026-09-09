@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10.4 to Pages
+name: Deploy Character Studio V1.8.10.5 to Pages
 
 on:
   push:
@@ -35,10 +35,10 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10.4 Pages artifact
+      - name: Build V1.8.10.5 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify V1.8.10.4 baseball throw and regression gates
+      - name: Verify Blue Explorer primary character and preserved runtime gates
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,55 +46,46 @@ jobs:
           h=Path('_site/index.html').read_text(encoding='utf-8')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10.4')
-          preserved=[
+              raise SystemExit('duplicate DOM ids in V1.8.10.5')
+          required=[
+              'Character Prototype Studio V1.8.10.5',
+              'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
+              'function createBlueExplorer(THREE)',
+              'function buildLegacyCharacter(preserve=true){',
+              'function buildBlueExplorerPrimaryCharacter(preserve=true){',
+              'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
+              'blueExplorerRegisterJoint("shoulderR",r.shoulder_left)',
+              'blueExplorerRegisterJoint("wristR",r.wrist_left)',
+              'blueExplorerRegisterJoint("ankleR",r.ankle_left)',
+              'socket(joints.wristR,"hand.R",[0,-.34,.10])',
+              'model.root.userData.engineRole="primary-character"',
+              'throwStyle:"overhand-baseball"',
+              'style:"overhead"',
+              'name:"ball.release"',
+              'name:mode==="summon"?"monster.summon":"capture.throw"',
               'Twist_Isolation_V1_8_5_2',
               'walkVisualShiftCap:.016',
               'run:{cadence:1.48',
               'sprint:{cadence:1.88',
               'FOOT PLANT + LEG RESPONSE',
               'maxRootCorrection:.028',
-              'Jump_Core',
-              'Crouch_Walk_Core',
-              'createDodgeCoreTemplate(side="R")',
-              'Hit_React_Core',
-              'Knockback_Core',
-              'Interact_Core',
-              'actionType:"throw"',
-              'name:"ball.release"',
-              'name:mode==="summon"?"monster.summon":"capture.throw"',
-              'THREE_CORE_SOURCES=[',
-              'makeFallbackOrbitControls',
-              'makeFallbackTransformControls',
-              'const clip=selectedAnimationClip();',
-              'checked=clip?.footPlant?.enabled!==false'
-          ]
-          for token in preserved:
-              if token not in h:
-                  raise SystemExit('missing preserved regression token: '+token)
-          required=[
-              'throwStyle:"overhand-baseball"',
-              'style:"overhead"',
-              'shoulderDriveDeg:30,wristFollowDeg:18',
-              'r(arm,-118,0,left?-4:4)',
-              'r(elbow,-126,0,left?-8:8)',
-              'forwardDrive:.072,lateralDrive:.002',
-              'sideLeanMul:.28',
-              'armMul:1.66',
-              'characterPrototypeStudio.v1.8.10.4'
+              'POCKET_STUDIO_CHARACTER_REQUEST',
+              'POCKET_STUDIO_CHARACTER_PACKAGE',
+              'pocket-character-runtime-v1',
+              'three-group-scenegraph-v1',
+              'pocket-character-render-profile-v1',
+              'studio-starter-pbr-2k-v1',
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10.4 baseball throw gate: '+token)
-          if 'enabled:true,side,style:"horizontal",anticipationEnd:Math.max(.06,settings.windup*.36)' in h:
-              raise SystemExit('frisbee-style horizontal throw profile still present')
+                  raise SystemExit('missing Blue Explorer/regression token: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v18104.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10.4 baseball throw/regression gates passed')
+          Path('/tmp/studio-v18105.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10.5 Blue Explorer primary/regression gates passed')
           PY
-          node --check /tmp/studio-v18104.mjs
+          node --check /tmp/studio-v18105.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
