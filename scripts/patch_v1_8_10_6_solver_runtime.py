@@ -19,6 +19,14 @@ const POCKET_STUDIO_SOLVER_RUNTIME_CHAIN=Object.freeze([
   "sample-blend","pelvis-weight","upper-body-weight","locomotion-dynamics","attack-weight",
   "body-dynamics","impact","momentum","equipment","foot-plant-leg-response"
 ]);
+const pocketStudioSolverBaseSockets=pocketStudioSockets;
+pocketStudioSockets=function pocketStudioSocketsWithFeet(){
+  const base=pocketStudioSolverBaseSockets();
+  return {...base,
+    "foot.L":{joint:pocketStudioJoint(["ankleL","kneeL","hipL"]),offset:[0,-.40,.45]},
+    "foot.R":{joint:pocketStudioJoint(["ankleR","kneeR","hipR"]),offset:[0,-.40,.45]}
+  };
+};
 function pocketStudioSolverRuntimeContract(){
   const runtime=spec?.animationRuntime||{};
   return {
@@ -30,6 +38,7 @@ function pocketStudioSolverRuntimeContract(){
     sourceCharacter:"blue-explorer-primary-v1",
     chain:[...POCKET_STUDIO_SOLVER_RUNTIME_CHAIN],
     parity:"same-standalone-runtime-source",
+    requiredSockets:["foot.L","foot.R"],
     options:{
       defaultState:String(runtime.defaultState||"idle"),
       transitionDefault:Number.isFinite(Number(runtime.transitionDefault))?Number(runtime.transitionDefault):.15,
