@@ -113,7 +113,7 @@ for token in blue_tokens:
         raise SystemExit('Blue Explorer primary-character patch failed: ' + token)
 
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
-expected_blue = '43ee6d2bbb726dffedb60468b6f21fd9cf50886481be4f4fa50e9c9d2a039b5c'
+expected_blue = 'e624b724c47b0adf50c762f350ff4e92188af63317f83f9ff601f38ae8be5a47'
 if actual != expected_blue:
     raise SystemExit(f'V1.8.10.5 source checksum mismatch: {actual}')
 
