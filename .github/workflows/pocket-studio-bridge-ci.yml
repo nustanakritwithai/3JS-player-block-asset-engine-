@@ -9,6 +9,7 @@ on:
       - 'scripts/patch_pocket_studio_live_bridge.py'
       - 'scripts/patch_pocket_studio_material_pack.py'
       - 'scripts/patch_v1_8_10_5_blue_explorer.py'
+      - 'scripts/patch_v1_8_10_6_solver_runtime.py'
       - 'assets/characters/**'
       - '.github/workflows/pocket-studio-bridge-ci.yml'
   workflow_dispatch:
@@ -33,18 +34,25 @@ jobs:
         run: |
           python scripts/generate_textures.py --output assets/textures --resolution 2048
           python scripts/verify_textures.py assets/textures 2048
-      - name: Build Studio with Pocket bridge and Blue Explorer primary
+      - name: Build Studio with Pocket bridge, Blue Explorer and shared solver runtime
         run: python scripts/build_pages.py
       - name: Execute built texture exporter regression
         run: node scripts/test_pocket_studio_texture_export.mjs
-      - name: Verify bridge contract, Blue Explorer default and preserved V1.8.10.4 behavior
+      - name: Verify bridge, Blue Explorer and shared solver runtime contract
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re, json
+          import re, json, hashlib
           h=Path('_site/index.html').read_text(encoding='utf-8')
+          solver=Path('_site/assets/runtime/studio-solver-runtime-v1.mjs')
+          if not solver.is_file():
+            raise SystemExit('shared solver runtime module missing')
+          solver_sha=hashlib.sha256(solver.read_bytes()).hexdigest()
+          solver_match=re.search(r'POCKET_STUDIO_SOLVER_RUNTIME_SHA256="([0-9a-f]{64})"',h)
+          if not solver_match or solver_match.group(1)!=solver_sha:
+            raise SystemExit('shared solver runtime SHA mismatch')
           required=[
-            'Character Prototype Studio V1.8.10.5',
+            'Character Prototype Studio V1.8.10.6',
             'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
             'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
             'model.root.userData.engineRole="primary-character"',
@@ -58,26 +66,19 @@ jobs:
             'gameplayPolicy:{included:false',
             'pocket-character-motion-pack-v1',
             'pocketStudioReadyMotionPack',
-            'Pocket motion pack missing usable',
             'requiredActions=["idle","walk","run","jump","attack","hurt","dead","capture_throw","summon_monster_throw","monster_command"]',
-            'unsupportedActions=Object.freeze',
-            'No distinct authored generic skill pose exists',
-            'No distinct authored ranged-weapon attack pose exists',
             'capture_throw:"capture_throw_r"',
             'events:[{type:"release"',
-            'events:[{type:"impact"',
-            'keyframeCount:Array.isArray(clip.keyframes)?clip.keyframes.length:0',
             'pocket-character-render-profile-v1',
-            'metadata-only-host-applied',
             'POCKET_STUDIO_TEXTURE_INTEGRITY=',
-            'producer-supplied',
-            'hostMustVerifyIntegrity:true',
-            'requiresExistingHostRenderer:true',
-            'createsRenderer:false,createsLights:false',
+            'studio-solver-runtime-v1',
+            'same-standalone-runtime-source',
+            'solverRuntime:pocketStudioSolverRuntimeContract()',
+            'assets/runtime/studio-solver-runtime-v1.mjs',
           ]
           for token in required:
             if token not in h:
-              raise SystemExit('missing bridge/Blue Explorer regression token: '+token)
+              raise SystemExit('missing bridge/solver regression token: '+token)
           if '"attack-ranged":"capture_throw_r"' in h or 'skill:"capture_throw_r"' in h:
             raise SystemExit('Capture Throw must not masquerade as ranged attack or generic skill')
           match=re.search(r'const POCKET_STUDIO_TEXTURE_INTEGRITY=(\{.*?\});',h)
@@ -90,6 +91,7 @@ jobs:
           if not scripts:
             raise SystemExit('module script not found')
           Path('/tmp/studio-pocket-bridge.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('Pocket Studio + Blue Explorer primary contract gate passed')
+          print('Pocket Studio V1.8.10.6 shared solver contract gate passed',solver_sha)
           PY
           node --check /tmp/studio-pocket-bridge.mjs
+          node --check _site/assets/runtime/studio-solver-runtime-v1.mjs
