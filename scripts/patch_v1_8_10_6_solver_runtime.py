@@ -20,7 +20,7 @@ const POCKET_STUDIO_SOLVER_RUNTIME_CHAIN=Object.freeze([
   "body-dynamics","impact","momentum","equipment","foot-plant-leg-response"
 ]);
 function pocketStudioSolverRuntimeContract(){
-  const runtime=runtimeManifest();
+  const runtime=spec?.animationRuntime||{};
   return {
     schema:POCKET_STUDIO_SOLVER_RUNTIME_SCHEMA,
     version:POCKET_STUDIO_SOLVER_RUNTIME_VERSION,
@@ -31,12 +31,12 @@ function pocketStudioSolverRuntimeContract(){
     chain:[...POCKET_STUDIO_SOLVER_RUNTIME_CHAIN],
     parity:"same-standalone-runtime-source",
     options:{
-      defaultState:runtime.defaultState,
-      transitionDefault:runtime.transitionDefault,
-      weight:pocketStudioSanitize(runtime.weight||{})||{},
-      footPlantLegResponse:pocketStudioSanitize(runtime.footPlantLegResponse||{})||{},
+      defaultState:String(runtime.defaultState||"idle"),
+      transitionDefault:Number.isFinite(Number(runtime.transitionDefault))?Number(runtime.transitionDefault):.15,
+      weight:pocketStudioSanitize(spec?.weight||{})||{},
+      footPlantLegResponse:pocketStudioSanitize(spec?.footPlantLegResponse||{})||{},
       momentum:pocketStudioSanitize(runtime.momentum||{})||{},
-      equipment:pocketStudioSanitize(runtime.equipment||{})||{}
+      equipment:pocketStudioSanitize(spec?.weight?.equipment||{})||{}
     }
   };
 }
