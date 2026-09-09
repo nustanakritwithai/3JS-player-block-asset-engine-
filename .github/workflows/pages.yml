@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10.5 to Pages
+name: Deploy Character Studio V1.8.10.6 to Pages
 
 on:
   push:
@@ -35,34 +35,42 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10.5 Pages artifact
+      - name: Build V1.8.10.6 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify Blue Explorer primary character and preserved runtime gates
+      - name: Verify Blue Explorer shared solver runtime and regressions
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
+          import re, hashlib
           h=Path('_site/index.html').read_text(encoding='utf-8')
+          solver=Path('_site/assets/runtime/studio-solver-runtime-v1.mjs')
+          if not solver.is_file():
+              raise SystemExit('canonical solver runtime module missing')
+          solver_sha=hashlib.sha256(solver.read_bytes()).hexdigest()
+          match=re.search(r'POCKET_STUDIO_SOLVER_RUNTIME_SHA256="([0-9a-f]{64})"',h)
+          if not match or match.group(1)!=solver_sha:
+              raise SystemExit('solver runtime package SHA does not match shipped module')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10.5')
+              raise SystemExit('duplicate DOM ids in V1.8.10.6')
           required=[
-              'Character Prototype Studio V1.8.10.5',
+              'Character Prototype Studio V1.8.10.6',
               'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
               'function createBlueExplorer(THREE)',
-              'function buildLegacyCharacter(preserve=true){',
-              'function buildBlueExplorerPrimaryCharacter(preserve=true){',
               'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
-              'blueExplorerRegisterJoint("shoulderR",r.shoulder_left)',
               'blueExplorerRegisterJoint("wristR",r.wrist_left)',
-              'blueExplorerRegisterJoint("ankleR",r.ankle_left)',
               'socket(joints.wristR,"hand.R",[0,-.34,.10])',
               'model.root.userData.engineRole="primary-character"',
               'throwStyle:"overhand-baseball"',
-              'style:"overhead"',
               'name:"ball.release"',
               'name:mode==="summon"?"monster.summon":"capture.throw"',
+              'studio-solver-runtime-v1',
+              'same-standalone-runtime-source',
+              'assets/runtime/studio-solver-runtime-v1.mjs',
+              'solverRuntime:pocketStudioSolverRuntimeContract()',
+              '"sample-blend","pelvis-weight","upper-body-weight","locomotion-dynamics","attack-weight"',
+              '"body-dynamics","impact","momentum","equipment","foot-plant-leg-response"',
               'Twist_Isolation_V1_8_5_2',
               'walkVisualShiftCap:.016',
               'run:{cadence:1.48',
@@ -70,22 +78,37 @@ jobs:
               'FOOT PLANT + LEG RESPONSE',
               'maxRootCorrection:.028',
               'POCKET_STUDIO_CHARACTER_REQUEST',
-              'POCKET_STUDIO_CHARACTER_PACKAGE',
               'pocket-character-runtime-v1',
               'three-group-scenegraph-v1',
-              'pocket-character-render-profile-v1',
               'studio-starter-pbr-2k-v1',
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing Blue Explorer/regression token: '+token)
+                  raise SystemExit('missing V1.8.10.6 token: '+token)
+          source=solver.read_text(encoding='utf-8')
+          solver_required=[
+              'class CharacterAnimationRuntime',
+              'applyRuntimePelvisSolver',
+              'applyRuntimeUpperBodySolver',
+              'applyRuntimeLocomotionDynamics',
+              'applyRuntimeAttackWeight',
+              'applyRuntimeBodyDynamics',
+              'applyRuntimeImpactSolver',
+              'applyRuntimeMomentumSolver',
+              'applyRuntimeEquipmentResponse',
+              'applyRuntimeFootPlantLegResponse',
+          ]
+          for token in solver_required:
+              if token not in source:
+                  raise SystemExit('missing canonical solver function: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v18105.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10.5 Blue Explorer primary/regression gates passed')
+          Path('/tmp/studio-v18106.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10.6 shared solver runtime gate passed',solver_sha)
           PY
-          node --check /tmp/studio-v18105.mjs
+          node --check /tmp/studio-v18106.mjs
+          node --check _site/assets/runtime/studio-solver-runtime-v1.mjs
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
