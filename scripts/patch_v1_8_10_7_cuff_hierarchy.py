@@ -32,8 +32,4 @@ function blueExplorerBindCuffsToElbows(r){
     if hierarchy_anchor not in html:
         raise RuntimeError('missing Blue Explorer hierarchy anchor')
     html = html.replace(hierarchy_anchor, hierarchy_replacement, 1)
-
-    html = html.replace('Character Prototype Studio V1.8.10.6', 'Character Prototype Studio V1.8.10.7')
-    html = html.replace('V1.8.10.6 · Shared Solver Runtime', 'V1.8.10.7 · Cuff Hierarchy Hotfix')
-    html = html.replace('studioVersion:"1.8.10.6"', 'studioVersion:"1.8.10.7"')
     return html
