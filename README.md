@@ -1,6 +1,6 @@
 # 3JS Player Block Asset Engine
 
-Current checkpoint: **Character Prototype Studio V1.8.10.5 — Blue Explorer Primary Character**.
+Current checkpoint: **Character Prototype Studio V1.8.10.7 — Tripo Primary Rigid Adapter**.
 
 Live GitHub Pages:
 
@@ -8,56 +8,112 @@ https://nustanakritwithai.github.io/3JS-player-block-asset-engine-/
 
 ## Current primary character
 
-**Blue Explorer** is now the default visual/rig character of the Character Engine.
+**Tripo 5889e73e** is the selected primary visual source for the Character Engine.
 
-The previous generated block character is preserved as **Legacy/Debug fallback**. V1.8.10.5 does not rebuild the animation engine; it retargets the existing engine to the Blue Explorer rigid-pivot model.
+Source:
 
-## Blue Explorer integration
+`assets/imports/tripo_5889e73e/tripo_5889e73e.glb`
 
-Source model characteristics:
+The original GLB is a static PBR glTF 2.0 mesh with **34,566 vertices / 46,897 triangles** and no authored skin/animation. V1.8.10.7 therefore does not pretend that the source is already rigged. Instead, the build pipeline compiles it into a deterministic rigid-pivot representation compatible with the existing Studio animation system.
 
-- procedural Three.js geometry; no GLB/OBJ dependency
-- rigid-part pivot rig
-- articulated shoulder → elbow → wrist chains
-- articulated hip → knee → ankle chains
-- neck → head hierarchy
-- generated local materials/textures
+## V1.8.10.7 — Tripo Primary Rigid Adapter
 
-Engine adapter:
+Build-time compiler:
 
-- converts presentation pivots into `pelvis → chest → neck/head`
-- reparents shoulders under chest and hips under pelvis while preserving bind-pose geometry
-- maps Blue Explorer spatial sides to engine `L/R` joint conventions
-- exposes engine joints `pelvis`, `chest`, `neck`, `head`, shoulders, elbows, wrists, hips, knees and ankles
-- exposes `hand.L`, `hand.R`, `foot.L`, `foot.R`, `chest`, `back`, `head` and `root` sockets
-- keeps the old `buildCharacter` implementation as `buildLegacyCharacter`
-- falls back to Legacy/Debug if Blue Explorer construction fails
+`scripts/compile_tripo_rigid.py`
 
-## Existing animation/runtime systems preserved
+The compiler:
 
-- Baseball-style Monster Ball Capture Throw / Summon Throw
-- `ball.release`, `capture.throw`, `monster.summon`
+- reads the actual GLB 2.0 binary at build time
+- resolves scene/node transforms
+- preserves POSITION / NORMAL / TEXCOORD_0 data
+- preserves triangle/material assignment
+- extracts embedded PBR images when present
+- normalizes the source to the Character Engine scale
+- detects an arms-down vs spread source pose
+- partitions complete triangles into rigid body regions
+- emits `studio-rigid-glb-v1`
+
+Runtime descriptor:
+
+`assets/runtime/tripo_5889e73e/rigid-model.json`
+
+Rigid regions:
+
+- pelvis / chest / neck / head
+- upper arm / lower arm / hand L/R
+- thigh / shin / foot L/R
+
+## Existing rig contract preserved
+
+The imported visual is mapped back onto the existing rigid `THREE.Group` hierarchy:
+
+- `pelvis`
+- `chest`
+- `neck`
+- `head`
+- `shoulderL/R`
+- `elbowL/R`
+- `wristL/R`
+- `hipL/R`
+- `kneeL/R`
+- `ankleL/R`
+
+Existing sockets remain authoritative:
+
+- `root`
+- `chest`
+- `back`
+- `head`
+- `hand.L` / `hand.R`
+- `foot.L` / `foot.R`
+- weapon / attack / throw sockets from the existing Pocket Studio contract
+
+This lets the existing animation runtime and solver chain continue to operate on the same joint/socket API instead of creating a second animation engine.
+
+## PBR handling
+
+The GLB compiler preserves scalar glTF metallic/roughness/base-color/emissive properties and extracts embedded texture images when present. The browser reconstructs these as `THREE.MeshStandardMaterial` resources. If an individual texture cannot load, the material keeps its scalar PBR fallback instead of blocking the character.
+
+## Fallback
+
+**Blue Explorer remains the deterministic fallback.**
+
+If the Tripo descriptor, geometry or material reconstruction fails, the Studio falls back to the already accepted Blue Explorer primary implementation. The original Legacy/Debug character remains behind Blue Explorer as its existing fallback.
+
+Fallback chain:
+
+`Tripo 5889e73e → Blue Explorer → Legacy/Debug`
+
+## Preserved animation/runtime systems
+
+- canonical shared solver runtime
+- Foot Plant + Leg Response
+- foot sockets required for solver parity
+- authoritative weapon socket transforms
+- baseball-style Capture / Summon Throw
 - Walk / Run / Sprint
 - Jump / Fall / Land / Crouch
 - Dodge / Hit / Knockback / Get Up / Death / Faint / Interact
-- Foot Plant + Leg Response
-- Twist Isolation / Action Body Dynamics
-- Walk lateral cap `0.016m`
-- Foot Plant max root correction `0.028m`
+- Twist / body / momentum / equipment dynamics
+- Pocket Studio live bridge
+- presentation-only Pocket Monster package boundary
+- deterministic 2K PBR starter gate
 
-## Pocket Studio bridge preserved
+## Acceptance gates
 
-V1.8.10.5 is layered **after** the current Pocket Studio live bridge and deterministic PBR material export patches. The producer contract remains presentation-only and continues to export scene graph, rig bindings, sockets, motion pack and render-profile metadata.
+V1.8.10.7 CI validates the real source GLB and requires:
 
-## Source integrity
-
-The Blue Explorer runtime factory is stored as deterministic compressed source parts under `assets/characters/`. CI reconstructs the factory and verifies its SHA-256 before injecting it into the final Studio artifact.
-
-## Roadmap
-
-- **V1.8.10.5** — Blue Explorer becomes primary Character Engine model
-- **V1.8.11** — Blue Explorer animation QA / transitions / visual acceptance
+- glTF 2.0 binary header
+- exactly 34,566 source vertices
+- exactly 46,897 source triangles
+- every source triangle retained in one rigid body region
+- non-empty primary body/limb regions
+- complete Character Engine joint map
+- Tripo primary builder present in final HTML
+- Blue Explorer fallback still present
+- solver module syntax / existing runtime contracts preserved
 
 ## Development rule
 
-Continue incrementally from the latest checkpoint; do not rebuild the Studio from scratch.
+Continue incrementally from the latest checkpoint. Do not rebuild the Studio from scratch and do not discard accepted animation, solver, socket or Pocket Monster contracts.
