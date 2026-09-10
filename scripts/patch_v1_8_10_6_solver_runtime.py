@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from patch_v1_8_10_7_cuff_hierarchy import patch as patch_v1_8_10_7_cuff_hierarchy
+
 
 def patch(html: str) -> str:
     html = html.replace('Character Prototype Studio V1.8.10.5', 'Character Prototype Studio V1.8.10.6')
@@ -90,4 +92,4 @@ function pocketStudioSolverRuntimeContract(){
     if old not in html:
         raise RuntimeError('missing rig/motionPack package anchor')
     html = html.replace(old, new, 1)
-    return html
+    return patch_v1_8_10_7_cuff_hierarchy(html)
