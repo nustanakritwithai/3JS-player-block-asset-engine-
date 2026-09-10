@@ -481,7 +481,7 @@ def _materials_and_textures(glb: GLB, output_dir: Path) -> tuple[list[dict[str, 
     return materials, textures_out
 
 
-def _partition(primitives: list[dict[str, Any]], rig: dict[str, Any]]) -> tuple[dict[str, Any], dict[str, int]]:
+def _partition(primitives: list[dict[str, Any]], rig: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int]]:
     segment_joint = {
         "pelvis": "pelvis", "chest": "chest", "neck": "neck", "head": "head",
         "upperArmL": "shoulderL", "lowerArmL": "elbowL", "handL": "wristL",
