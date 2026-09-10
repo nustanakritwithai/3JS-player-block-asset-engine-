@@ -33,6 +33,8 @@ from patch_pocket_studio_live_bridge import patch as patch_pocket_studio_live_br
 from patch_pocket_studio_material_pack import patch as patch_pocket_studio_material_pack
 from patch_v1_8_10_5_blue_explorer import patch as patch_v1_8_10_5_blue_explorer
 from patch_v1_8_10_6_solver_runtime import patch as patch_v1_8_10_6_solver_runtime
+from patch_v1_8_10_7_tripo_primary import patch as patch_v1_8_10_7_tripo_primary
+from compile_tripo_rigid import compile_glb
 
 html = patch_v1_8_4_1(html)
 html = patch_v1_8_5(html)
@@ -158,21 +160,63 @@ for token in solver_tokens:
     if token not in html:
         raise SystemExit('V1.8.10.6 solver runtime patch failed: ' + token)
 
+# V1.8.10.7 promotes the user-selected Tripo GLB while preserving Blue Explorer
+# as a deterministic fallback. The source GLB is compiled into rigid regions at
+# build time; the browser only reconstructs THREE.Group/BufferGeometry/PBR data.
+html = patch_v1_8_10_7_tripo_primary(html)
+tripo_tokens = [
+    'Character Prototype Studio V1.8.10.7',
+    'TRIPO_PRIMARY_ID="tripo-5889e73e-rigid-v1"',
+    'TRIPO_PRIMARY_SOURCE="assets/imports/tripo_5889e73e/tripo_5889e73e.glb"',
+    'TRIPO_PRIMARY_DESCRIPTOR_URL="./assets/runtime/tripo_5889e73e/rigid-model.json"',
+    'function buildTripoPrimaryCharacter(preserve=true){',
+    'function buildCharacter(preserve=true){return buildTripoPrimaryCharacter(preserve)}',
+    'return buildBlueExplorerPrimaryCharacter(preserve)',
+    'socket(joints.wristR,"hand.R",[0,-.34,.10])',
+    'socket(joints.ankleR,"foot.R",[0,-.40,.45])',
+    'sourceCharacter:"tripo-5889e73e-rigid-v1"',
+    'studio-rigid-glb-v1',
+]
+for token in tripo_tokens:
+    if token not in html:
+        raise SystemExit('V1.8.10.7 Tripo primary adapter failed: ' + token)
+
 site = root / '_site'
 if site.exists():
     shutil.rmtree(site)
 site.mkdir(parents=True)
-(site / 'index.html').write_text(html, encoding='utf-8')
 if (root / 'assets').exists():
     shutil.copytree(root / 'assets', site / 'assets', dirs_exist_ok=True)
+
+tripo_source = root / 'assets' / 'imports' / 'tripo_5889e73e' / 'tripo_5889e73e.glb'
+if not tripo_source.is_file():
+    raise SystemExit('Tripo primary source GLB missing')
+tripo_runtime_dir = site / 'assets' / 'runtime' / 'tripo_5889e73e'
+tripo_descriptor = compile_glb(tripo_source, tripo_runtime_dir)
+tripo_stats = tripo_descriptor['stats']
+if tripo_stats['sourceVertices'] != 34566:
+    raise SystemExit(f"Tripo source vertex count mismatch: {tripo_stats['sourceVertices']}")
+if tripo_stats['sourceTriangles'] != 46897:
+    raise SystemExit(f"Tripo source triangle count mismatch: {tripo_stats['sourceTriangles']}")
+if tripo_stats['rigidTriangles'] != tripo_stats['sourceTriangles']:
+    raise SystemExit('Tripo rigid partition did not preserve every source triangle')
+required_regions = ['pelvis','chest','head','upperArmL','lowerArmL','handL','upperArmR','lowerArmR','handR','thighL','shinL','footL','thighR','shinR','footR']
+missing_regions = [name for name in required_regions if tripo_stats['regions'].get(name, 0) <= 0]
+if missing_regions:
+    raise SystemExit('Tripo rigid partition empty region(s): ' + ','.join(missing_regions))
+
+(site / 'index.html').write_text(html, encoding='utf-8')
 solver_path = site / 'assets' / 'runtime' / 'studio-solver-runtime-v1.mjs'
 solver_path.parent.mkdir(parents=True, exist_ok=True)
 solver_path.write_text(solver_source, encoding='utf-8')
 (site / '.nojekyll').write_text('', encoding='utf-8')
 actual = hashlib.sha256(html.encode('utf-8')).hexdigest()
-print(f'Built V1.8.10.6 Blue Explorer + shared solver runtime {len(html.encode("utf-8"))} bytes')
+print(f'Built V1.8.10.7 Tripo primary rigid adapter {len(html.encode("utf-8"))} bytes')
 print('base-v1.8.10.4-sha256', base_actual)
 print('v1.8.10.5-sha256', v18105_actual)
 print('blue-explorer-factory-sha256', blue_factory_sha)
 print('solver-runtime-sha256', solver_sha)
+print('tripo-source-vertices', tripo_stats['sourceVertices'])
+print('tripo-source-triangles', tripo_stats['sourceTriangles'])
+print('tripo-rigid-regions', json.dumps(tripo_stats['regions'], sort_keys=True))
 print('sha256', actual)
