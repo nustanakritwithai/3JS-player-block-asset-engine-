@@ -10,7 +10,10 @@ on:
       - 'scripts/patch_pocket_studio_material_pack.py'
       - 'scripts/patch_v1_8_10_5_blue_explorer.py'
       - 'scripts/patch_v1_8_10_6_solver_runtime.py'
+      - 'scripts/patch_v1_8_10_7_tripo_primary.py'
+      - 'scripts/compile_tripo_rigid.py'
       - 'assets/characters/**'
+      - 'assets/imports/tripo_5889e73e/**'
       - '.github/workflows/pocket-studio-bridge-ci.yml'
   workflow_dispatch:
 
@@ -34,16 +37,23 @@ jobs:
         run: |
           python scripts/generate_textures.py --output assets/textures --resolution 2048
           python scripts/verify_textures.py assets/textures 2048
-      - name: Build Studio with Pocket bridge, Blue Explorer and shared solver runtime
+      - name: Build Studio with Tripo primary, Pocket bridge and shared solver runtime
         run: python scripts/build_pages.py
       - name: Execute built texture exporter regression
         run: node scripts/test_pocket_studio_texture_export.mjs
-      - name: Verify bridge, Blue Explorer and shared solver runtime contract
+      - name: Verify bridge, Tripo primary, fallback and shared solver runtime contract
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json, hashlib
           h=Path('_site/index.html').read_text(encoding='utf-8')
+          descriptor=json.loads(Path('_site/assets/runtime/tripo_5889e73e/rigid-model.json').read_text(encoding='utf-8'))
+          if descriptor['schema']!='studio-rigid-glb-v1' or descriptor['id']!='tripo-5889e73e-rigid-v1':
+            raise SystemExit('Tripo descriptor contract mismatch')
+          if descriptor['stats']['sourceVertices']!=34566 or descriptor['stats']['sourceTriangles']!=46897:
+            raise SystemExit('Tripo imported mesh stats changed')
+          if descriptor['stats']['rigidTriangles']!=descriptor['stats']['sourceTriangles']:
+            raise SystemExit('Tripo partition dropped triangles')
           solver=Path('_site/assets/runtime/studio-solver-runtime-v1.mjs')
           if not solver.is_file():
             raise SystemExit('shared solver runtime module missing')
@@ -52,10 +62,12 @@ jobs:
           if not solver_match or solver_match.group(1)!=solver_sha:
             raise SystemExit('shared solver runtime SHA mismatch')
           required=[
-            'Character Prototype Studio V1.8.10.6',
+            'Character Prototype Studio V1.8.10.7',
+            'TRIPO_PRIMARY_ID="tripo-5889e73e-rigid-v1"',
+            'function buildCharacter(preserve=true){return buildTripoPrimaryCharacter(preserve)}',
+            'sourceCharacter:"tripo-5889e73e-rigid-v1"',
             'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
-            'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
-            'model.root.userData.engineRole="primary-character"',
+            'return buildBlueExplorerPrimaryCharacter(preserve)',
             'throwStyle:"overhand-baseball"',
             'POCKET_STUDIO_CHARACTER_REQUEST',
             'POCKET_STUDIO_CHARACTER_PACKAGE',
@@ -75,10 +87,12 @@ jobs:
             'same-standalone-runtime-source',
             'solverRuntime:pocketStudioSolverRuntimeContract()',
             'assets/runtime/studio-solver-runtime-v1.mjs',
+            'socket(joints.wristR,"hand.R",[0,-.34,.10])',
+            'socket(joints.ankleR,"foot.R",[0,-.40,.45])',
           ]
           for token in required:
             if token not in h:
-              raise SystemExit('missing bridge/solver regression token: '+token)
+              raise SystemExit('missing bridge/Tripo/solver regression token: '+token)
           if '"attack-ranged":"capture_throw_r"' in h or 'skill:"capture_throw_r"' in h:
             raise SystemExit('Capture Throw must not masquerade as ranged attack or generic skill')
           match=re.search(r'const POCKET_STUDIO_TEXTURE_INTEGRITY=(\{.*?\});',h)
@@ -91,7 +105,7 @@ jobs:
           if not scripts:
             raise SystemExit('module script not found')
           Path('/tmp/studio-pocket-bridge.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('Pocket Studio V1.8.10.6 shared solver contract gate passed',solver_sha)
+          print('Pocket Studio V1.8.10.7 Tripo primary contract gate passed',solver_sha)
           PY
           node --check /tmp/studio-pocket-bridge.mjs
           node --check _site/assets/runtime/studio-solver-runtime-v1.mjs
