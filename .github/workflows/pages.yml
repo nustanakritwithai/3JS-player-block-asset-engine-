@@ -1,4 +1,4 @@
-name: Deploy Character Studio V1.8.10.6 to Pages
+name: Deploy Character Studio V1.8.10.7 to Pages
 
 on:
   push:
@@ -35,15 +35,31 @@ jobs:
       - name: Verify texture quality gate
         run: python scripts/verify_textures.py assets/textures 2048
 
-      - name: Build V1.8.10.6 Pages artifact
+      - name: Build V1.8.10.7 Pages artifact
         run: python scripts/build_pages.py
 
-      - name: Verify Blue Explorer shared solver runtime and regressions
+      - name: Verify Tripo primary, fallback and shared solver runtime
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re, hashlib
+          import re, hashlib, json, struct
           h=Path('_site/index.html').read_text(encoding='utf-8')
+          source=Path('assets/imports/tripo_5889e73e/tripo_5889e73e.glb')
+          raw=source.read_bytes()
+          if raw[:4]!=b'glTF' or struct.unpack_from('<I',raw,4)[0]!=2:
+              raise SystemExit('Tripo primary source is not glTF 2.0 binary')
+          descriptor_path=Path('_site/assets/runtime/tripo_5889e73e/rigid-model.json')
+          if not descriptor_path.is_file():
+              raise SystemExit('Tripo rigid descriptor missing')
+          descriptor=json.loads(descriptor_path.read_text(encoding='utf-8'))
+          if descriptor.get('schema')!='studio-rigid-glb-v1' or descriptor.get('id')!='tripo-5889e73e-rigid-v1':
+              raise SystemExit('Tripo rigid descriptor contract mismatch')
+          stats=descriptor['stats']
+          if stats['sourceVertices']!=34566 or stats['sourceTriangles']!=46897 or stats['rigidTriangles']!=46897:
+              raise SystemExit('Tripo source/partition stats mismatch: '+repr(stats))
+          required_regions=['pelvis','chest','head','upperArmL','lowerArmL','handL','upperArmR','lowerArmR','handR','thighL','shinL','footL','thighR','shinR','footR']
+          if any(stats['regions'].get(name,0)<=0 for name in required_regions):
+              raise SystemExit('Tripo primary has empty required rigid region')
           solver=Path('_site/assets/runtime/studio-solver-runtime-v1.mjs')
           if not solver.is_file():
               raise SystemExit('canonical solver runtime module missing')
@@ -53,15 +69,19 @@ jobs:
               raise SystemExit('solver runtime package SHA does not match shipped module')
           ids=re.findall(r'id="([^"]+)"',h)
           if len(ids)!=len(set(ids)):
-              raise SystemExit('duplicate DOM ids in V1.8.10.6')
+              raise SystemExit('duplicate DOM ids in V1.8.10.7')
           required=[
-              'Character Prototype Studio V1.8.10.6',
+              'Character Prototype Studio V1.8.10.7',
+              'TRIPO_PRIMARY_ID="tripo-5889e73e-rigid-v1"',
+              'TRIPO_PRIMARY_SOURCE="assets/imports/tripo_5889e73e/tripo_5889e73e.glb"',
+              'function buildTripoPrimaryCharacter(preserve=true){',
+              'function buildCharacter(preserve=true){return buildTripoPrimaryCharacter(preserve)}',
+              'sourceCharacter:"tripo-5889e73e-rigid-v1"',
               'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
+              'return buildBlueExplorerPrimaryCharacter(preserve)',
               'function createBlueExplorer(THREE)',
-              'function buildCharacter(preserve=true){return buildBlueExplorerPrimaryCharacter(preserve)}',
-              'blueExplorerRegisterJoint("wristR",r.wrist_left)',
               'socket(joints.wristR,"hand.R",[0,-.34,.10])',
-              'model.root.userData.engineRole="primary-character"',
+              'socket(joints.ankleR,"foot.R",[0,-.40,.45])',
               'throwStyle:"overhand-baseball"',
               'name:"ball.release"',
               'name:mode==="summon"?"monster.summon":"capture.throw"',
@@ -73,10 +93,7 @@ jobs:
               '"body-dynamics","impact","momentum","equipment","foot-plant-leg-response"',
               'Twist_Isolation_V1_8_5_2',
               'walkVisualShiftCap:.016',
-              'run:{cadence:1.48',
-              'sprint:{cadence:1.88',
               'FOOT PLANT + LEG RESPONSE',
-              'maxRootCorrection:.028',
               'POCKET_STUDIO_CHARACTER_REQUEST',
               'pocket-character-runtime-v1',
               'three-group-scenegraph-v1',
@@ -84,8 +101,8 @@ jobs:
           ]
           for token in required:
               if token not in h:
-                  raise SystemExit('missing V1.8.10.6 token: '+token)
-          source=solver.read_text(encoding='utf-8')
+                  raise SystemExit('missing V1.8.10.7 token: '+token)
+          solver_source=solver.read_text(encoding='utf-8')
           solver_required=[
               'class CharacterAnimationRuntime',
               'applyRuntimePelvisSolver',
@@ -99,15 +116,15 @@ jobs:
               'applyRuntimeFootPlantLegResponse',
           ]
           for token in solver_required:
-              if token not in source:
+              if token not in solver_source:
                   raise SystemExit('missing canonical solver function: '+token)
           scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
           if not scripts:
               raise SystemExit('module script not found')
-          Path('/tmp/studio-v18106.mjs').write_text(scripts[-1],encoding='utf-8')
-          print('V1.8.10.6 shared solver runtime gate passed',solver_sha)
+          Path('/tmp/studio-v18107.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('V1.8.10.7 Tripo primary gate passed',stats,'solver',solver_sha)
           PY
-          node --check /tmp/studio-v18106.mjs
+          node --check /tmp/studio-v18107.mjs
           node --check _site/assets/runtime/studio-solver-runtime-v1.mjs
 
       - name: Configure Pages
