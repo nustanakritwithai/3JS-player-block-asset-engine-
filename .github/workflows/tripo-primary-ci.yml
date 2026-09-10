@@ -1,0 +1,108 @@
+name: Tripo primary rigid adapter CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/imports/tripo_5889e73e/**'
+      - 'scripts/compile_tripo_rigid.py'
+      - 'scripts/patch_v1_8_10_7_tripo_primary.py'
+      - 'scripts/build_pages.py'
+      - '.github/workflows/tripo-primary-ci.yml'
+      - 'checkpoints/v1.8.10.7/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify imported GLB header and compile rigid descriptor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+          p=Path('assets/imports/tripo_5889e73e/tripo_5889e73e.glb')
+          b=p.read_bytes()
+          if b[:4] != b'glTF': raise SystemExit('Tripo source is not GLB')
+          version=struct.unpack_from('<I',b,4)[0]
+          if version != 2: raise SystemExit(f'expected glTF 2, got {version}')
+          print('GLB bytes',len(b),'version',version)
+          PY
+          rm -rf /tmp/tripo-rigid
+          python scripts/compile_tripo_rigid.py assets/imports/tripo_5889e73e/tripo_5889e73e.glb /tmp/tripo-rigid
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          d=json.loads(Path('/tmp/tripo-rigid/rigid-model.json').read_text())
+          assert d['schema']=='studio-rigid-glb-v1'
+          assert d['id']=='tripo-5889e73e-rigid-v1'
+          assert d['architecture']=='THREE.Group'
+          assert d['stats']['sourceVertices']==34566, d['stats']
+          assert d['stats']['sourceTriangles']==46897, d['stats']
+          assert d['stats']['rigidTriangles']==46897, d['stats']
+          for key in ['pelvis','chest','head','upperArmL','lowerArmL','handL','upperArmR','lowerArmR','handR','thighL','shinL','footL','thighR','shinR','footR']:
+              assert d['stats']['regions'][key] > 0, (key,d['stats']['regions'])
+          for key in ['pelvis','chest','neck','head','shoulderL','elbowL','wristL','shoulderR','elbowR','wristR','hipL','kneeL','ankleL','hipR','kneeR','ankleR']:
+              assert key in d['rig']['joints'], key
+          print('rig pose',d['rig']['pose'],'rightSign',d['rig']['rightSign'])
+          print('region tris',d['stats']['regions'])
+          PY
+
+      - name: Generate and verify 2K PBR starter textures
+        run: |
+          python -m pip install --disable-pip-version-check numpy pillow
+          python scripts/generate_textures.py --output assets/textures --resolution 2048
+          python scripts/verify_textures.py assets/textures 2048
+
+      - name: Build V1.8.10.7 Pages artifact
+        run: python scripts/build_pages.py
+
+      - name: Verify Tripo primary runtime and preserved solver contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,re,hashlib
+          h=Path('_site/index.html').read_text(encoding='utf-8')
+          required=[
+            'Character Prototype Studio V1.8.10.7',
+            'TRIPO_PRIMARY_ID="tripo-5889e73e-rigid-v1"',
+            'function buildTripoPrimaryCharacter(preserve=true){',
+            'function buildCharacter(preserve=true){return buildTripoPrimaryCharacter(preserve)}',
+            'TRIPO_PRIMARY_DESCRIPTOR_URL="./assets/runtime/tripo_5889e73e/rigid-model.json"',
+            'sourceCharacter:"tripo-5889e73e-rigid-v1"',
+            'BLUE_EXPLORER_PRIMARY_ID="blue-explorer-primary-v1"',
+            'return buildBlueExplorerPrimaryCharacter(preserve)',
+            'socket(joints.wristR,"hand.R",[0,-.34,.10])',
+            'socket(joints.ankleR,"foot.R",[0,-.40,.45])',
+            'studio-solver-runtime-v1',
+            'same-standalone-runtime-source',
+            'POCKET_STUDIO_CHARACTER_REQUEST',
+            'pocket-character-runtime-v1',
+          ]
+          for token in required:
+              if token not in h: raise SystemExit('missing token: '+token)
+          d=json.loads(Path('_site/assets/runtime/tripo_5889e73e/rigid-model.json').read_text())
+          if d['stats']['sourceTriangles'] != 46897: raise SystemExit('Tripo descriptor triangle mismatch')
+          solver=Path('_site/assets/runtime/studio-solver-runtime-v1.mjs')
+          if not solver.is_file(): raise SystemExit('solver runtime missing')
+          ids=re.findall(r'id="([^"]+)"',h)
+          if len(ids)!=len(set(ids)): raise SystemExit('duplicate DOM ids')
+          scripts=re.findall(r'<script type="module">(.*?)</script>',h,re.S)
+          if not scripts: raise SystemExit('module script missing')
+          Path('/tmp/studio-v18107.mjs').write_text(scripts[-1],encoding='utf-8')
+          print('descriptor bytes',Path('_site/assets/runtime/tripo_5889e73e/rigid-model.json').stat().st_size)
+          print('solver sha256',hashlib.sha256(solver.read_bytes()).hexdigest())
+          PY
+          node --check /tmp/studio-v18107.mjs
+          node --check _site/assets/runtime/studio-solver-runtime-v1.mjs
